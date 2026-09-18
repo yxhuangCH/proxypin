@@ -22,7 +22,7 @@ import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/components/manager/request_rewrite_manager.dart';
 import 'package:proxypin/network/components/manager/rewrite_rule.dart';
@@ -42,6 +42,8 @@ import 'package:proxypin/utils/curl.dart';
 import 'package:proxypin/utils/lang.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
+import 'package:proxypin/utils/platform.dart';
 
 /// 收藏列表页面
 /// @author WangHongEn
@@ -63,14 +65,15 @@ class _FavoritesState extends State<MobileFavorites> {
     final favorites = await FavoriteStorage.favorites;
     final json = FavoriteStorage.toJson(favorites);
     final bytes = utf8.encode(json);
-    final path = await FilePicker.saveFile(fileName: 'favorites.json', bytes: bytes);
+    final path = await FilePickerUtil.saveFile(fileName: 'favorites.json', bytes: bytes);
     if (path == null) return;
-    if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+    if (mounted) Toast.show(localizations.exportSuccess, context);
   }
 
   Future<String?> _materializePickedFile(PlatformFile file) async {
     if (file.path != null) return file.path!;
-    final bytes = await file.readAsBytes();
+    final bytes = file.bytes;
+    if (bytes == null) return null;
     final tmp = await File('${Directory.systemTemp.path}/${file.name}').create();
     await tmp.writeAsBytes(bytes, flush: true);
     return tmp.path;
@@ -90,14 +93,14 @@ class _FavoritesState extends State<MobileFavorites> {
                     try {
                       await _exportJson();
                     } catch (e) {
-                      if (context.mounted) FlutterToastr.show('${localizations.importFailed}: $e', context);
+                      if (context.mounted) Toast.show('${localizations.importFailed}: $e', context);
                     }
                   }),
               IconButton(
                   tooltip: localizations.import,
                   icon: const Icon(Icons.download_for_offline_outlined, size: 20),
                   onPressed: () async {
-                    final result = await FilePicker.pickFiles(
+                    final result = await FilePickerUtil.pickFiles(
                         type: FileType.custom, allowedExtensions: ['json', 'har']);
                     final file = result?.files.isNotEmpty == true ? result!.files.first : null;
                     if (file == null) return;
@@ -105,10 +108,10 @@ class _FavoritesState extends State<MobileFavorites> {
                     if (path == null) return;
                     try {
                       await FavoriteStorage.importFromFile(path);
-                      if (context.mounted) FlutterToastr.show(localizations.importSuccess, context);
+                      if (context.mounted) Toast.show(localizations.importSuccess, context);
                       setState(() {});
                     } catch (e) {
-                      if (context.mounted) FlutterToastr.show('${localizations.importFailed}: $e', context);
+                      if (context.mounted) Toast.show('${localizations.importFailed}: $e', context);
                     }
                   }),
             ]),
@@ -239,7 +242,7 @@ class _FavoriteItemState extends State<_FavoriteItem> {
     MediaQueryData mediaQuery = MediaQuery.of(context);
     var position = RelativeRect.fromLTRB(globalPosition.dx, globalPosition.dy, globalPosition.dx, globalPosition.dy);
     // Trigger haptic feedback
-    if (Platform.isAndroid) HapticFeedback.mediumImpact();
+    if (Platforms.isAndroid()) HapticFeedback.mediumImpact();
 
     showMenu(
         context: context,
@@ -262,7 +265,7 @@ class _FavoriteItemState extends State<_FavoriteItem> {
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: request.requestUrl)).then((value) {
                         if (mounted) {
-                          FlutterToastr.show(localizations.copied, context);
+                          Toast.show(localizations.copied, context);
                           Navigator.maybePop(context);
                         }
                       });
@@ -274,7 +277,7 @@ class _FavoriteItemState extends State<_FavoriteItem> {
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: curlRequest(request))).then((value) {
                         if (mounted) {
-                          FlutterToastr.show(localizations.copied, context);
+                          Toast.show(localizations.copied, context);
                           Navigator.maybePop(context);
                         }
                       });
@@ -355,7 +358,7 @@ class _FavoriteItemState extends State<_FavoriteItem> {
                 itemButton(
                     onPressed: () {
                       widget.onRemove?.call(widget.favorite);
-                      FlutterToastr.show(localizations.deleteSuccess, context);
+                      Toast.show(localizations.deleteSuccess, context);
                       Navigator.maybePop(context);
                     },
                     label: localizations.deleteFavorite,
@@ -384,7 +387,7 @@ class _FavoriteItemState extends State<_FavoriteItem> {
     HttpClients.proxyRequest(httpRequest, proxyInfo: proxyInfo);
 
     if (mounted) {
-      FlutterToastr.show(localizations.reSendRequest, context);
+      Toast.show(localizations.reSendRequest, context);
     }
   }
 

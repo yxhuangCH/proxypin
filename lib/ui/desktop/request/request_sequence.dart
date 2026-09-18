@@ -28,6 +28,7 @@ import 'package:proxypin/utils/keyword_highlight.dart';
 import 'package:proxypin/utils/listenable_list.dart';
 
 import '../../component/model/search_model.dart';
+import 'package:proxypin/utils/platform.dart';
 
 ///请求序列 列表
 /// @author wanghongen
@@ -172,7 +173,7 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
             : Image.memory(
                 data,
                 width: 23,
-                height: Platform.isWindows ? 16 : null,
+                height: Platforms.isWindows() ? 16 : null,
                 errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const SizedBox(),
               ));
   }

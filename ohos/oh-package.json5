@@ -1,0 +1,13 @@
+{
+  "modelVersion": "6.1.1",
+  "description": "ProxyPin HarmonyOS",
+  "dependencies": {},
+  "devDependencies": {},
+  "overrides": {
+    "url_launcher_ohos": "../../../.pub-cache/hosted/pub.flutter-io.cn/url_launcher_ohos-6.3.0/ohos",
+    "shared_preferences_ohos": "../../../.pub-cache/hosted/pub.flutter-io.cn/shared_preferences_ohos-2.2.0/ohos",
+    "path_provider_ohos": "../../../.pub-cache/hosted/pub.flutter-io.cn/path_provider_ohos-2.2.1/ohos",
+    "@ohos/flutter_module": "file:./entry",
+    "@ohos/flutter_ohos": "file:./har/flutter.har"
+  }
+}

@@ -20,16 +20,18 @@ import 'dart:io';
 import 'package:code_forge/code_forge.dart';
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:re_highlight/styles/atom-one-dark.dart';
 import 'package:re_highlight/styles/atom-one-light.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/http/content_type.dart';
 import 'package:proxypin/ui/component/search/finder.dart';
 import 'package:proxypin/utils/highlight_languages.dart';
 import 'package:proxypin/utils/platform.dart';
+import 'package:proxypin/utils/share.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:xml/xml.dart';
 
@@ -116,11 +118,11 @@ class _XmlViewerPageState extends State<XmlViewerPage> {
   Future<void> _openFile() async {
     String? path;
     try {
-      final result = await FilePicker.pickFiles(type: FileType.any);
+      final result = await FilePickerUtil.pickFiles(type: FileType.any);
       path = result?.files.single.path;
     } catch (_) {
       // 某些平台（e.g. Linux）custom + extensions 可能抛错，回退到任意类型
-      final result = await FilePicker.pickFiles();
+      final result = await FilePickerUtil.pickFiles();
       path = result?.files.single.path;
     }
 
@@ -143,26 +145,26 @@ class _XmlViewerPageState extends State<XmlViewerPage> {
       if (await Platforms.isIpad() && mounted) {
         box = context.findRenderObject() as RenderBox?;
       }
-      await SharePlus.instance.share(
+      await ShareUtil.share(
           ShareParams(files: [file], fileNameOverrides: const ['data.xml'], sharePositionOrigin: box?.paintBounds));
       return;
     }
 
-    String? path = await FilePicker.saveFile(fileName: 'data.xml', bytes: utf8.encode(text));
+    String? path = await FilePickerUtil.saveFile(fileName: 'data.xml', bytes: utf8.encode(text));
     if (path == null) return;
     if (mounted) _toast(localizations.saveSuccess);
   }
 
   void _toast(String msg) {
     if (!mounted) return;
-    FlutterToastr.show(msg, context, duration: 3);
+    Toast.show(msg, context, duration: 3);
   }
 
   // ---------- UI ----------
 
   @override
   Widget build(BuildContext context) {
-    bool isNewWindows = widget.windowId != null && Platform.isWindows;
+    bool isNewWindows = widget.windowId != null && Platforms.isWindows();
 
     return Scaffold(
       appBar: isNewWindows

@@ -1,8 +1,9 @@
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/components/manager/request_map_manager.dart';
 import 'package:proxypin/ui/component/app_dialog.dart';
@@ -11,6 +12,7 @@ import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/mobile/setting/request_map/map_local.dart';
 import 'package:proxypin/ui/mobile/setting/request_map/map_scipt.dart';
 import 'package:proxypin/utils/lang.dart';
+import 'package:proxypin/utils/share.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../network/util/logger.dart';
@@ -95,7 +97,7 @@ class _RequestMapPageState extends State<MobileRequestMapPage> {
 
   //导入js
   Future<void> import() async {
-    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.any);
+    FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.any);
     if (result == null || result.files.isEmpty) {
       return;
     }
@@ -374,7 +376,7 @@ class _RequestMapListState extends State<RequestMapList> {
       fileNameOverrides: [fileName],
       sharePositionOrigin: box?.paintBounds,
     );
-    await SharePlus.instance.share(shareParams);
+    await ShareUtil.share(shareParams);
   }
 
   void enableStatus(bool enable) {
@@ -398,7 +400,7 @@ class _RequestMapListState extends State<RequestMapList> {
       });
       _refreshConfig(force: true);
 
-      if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+      if (mounted) Toast.show(localizations.deleteSuccess, context);
     });
   }
 }
@@ -463,7 +465,7 @@ class _RequestMapEditState extends State<MobileRequestMapEdit> {
                   child: Text(localizations.save),
                   onPressed: () async {
                     if (!(formKey.currentState as FormState).validate()) {
-                      FlutterToastr.show(localizations.cannotBeEmpty, context, position: FlutterToastr.center);
+                      Toast.show(localizations.cannotBeEmpty, context, position: Toast.center);
                       return;
                     }
 

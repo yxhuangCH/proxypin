@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -24,6 +23,7 @@ import 'package:proxypin/utils/font.dart';
 import 'package:scrollable_positioned_list_nic/scrollable_positioned_list_nic.dart';
 
 import '../../../utils/platform.dart';
+import 'package:proxypin/utils/platform.dart';
 
 class JsonText extends StatefulWidget {
   final ColorTheme colorTheme;
@@ -241,7 +241,7 @@ class _JsonTextState extends State<JsonText> {
       prevOffset = trackingScroll.offset;
     });
 
-    if (Platform.isIOS && scrollController != null) {
+    if (Platforms.isIOS() && scrollController != null) {
       scrollController.addListener(() {
         if (scrollController.offset >= scrollController.position.maxScrollExtent) {
           scrollController.jumpTo(scrollController.position.maxScrollExtent);

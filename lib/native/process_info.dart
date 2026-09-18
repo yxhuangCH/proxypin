@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:proxypin/network/channel/host_port.dart';
 import 'package:proxypin/network/util/process_info.dart';
+import 'package:proxypin/utils/platform.dart';
 
 class ProcessInfoPlugin {
   static const MethodChannel _methodChannel = MethodChannel('com.proxy/processInfo');
@@ -20,7 +21,7 @@ class ProcessInfoPlugin {
   }
 
   static Future<HostAndPort?> getRemoteAddressByPort(int port) async {
-    if (!Platform.isAndroid) return null;
+    if (!Platforms.isAndroid()) return null;
 
     return _methodChannel.invokeMethod<Map>('getRemoteAddressByPort', {"port": port}).then((process) {
       if (process == null) return null;

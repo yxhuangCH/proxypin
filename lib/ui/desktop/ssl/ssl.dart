@@ -1,9 +1,10 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/util/crts.dart';
 import 'package:proxypin/network/util/logger.dart';
@@ -57,7 +58,7 @@ class _SslState extends State<SslWidget> {
             showConfirmDialog(context, title: localizations.generateCA, content: localizations.generateCADescribe,
                 onConfirm: () async {
               await CertificateManager.generateNewRootCA();
-              if (context.mounted) FlutterToastr.show(localizations.success, context);
+              if (context.mounted) Toast.show(localizations.success, context);
             });
           }),
           const Divider(thickness: 0.3, height: 3),
@@ -66,7 +67,7 @@ class _SslState extends State<SslWidget> {
                 title: localizations.resetDefaultCA,
                 content: localizations.resetDefaultCADescribe, onConfirm: () async {
               await CertificateManager.resetDefaultRootCA();
-              if (context.mounted) FlutterToastr.show(localizations.success, context);
+              if (context.mounted) Toast.show(localizations.success, context);
             });
           }),
         ]);
@@ -75,7 +76,7 @@ class _SslState extends State<SslWidget> {
   //import method
   Widget importMenu() {
     return item(localizations.importCaP12, onPressed: () async {
-      FilePickerResult? result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['p12', 'pfx']);
+      FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.custom, allowedExtensions: ['p12', 'pfx']);
       if (result == null || !mounted) return;
 
       //entry password
@@ -105,12 +106,12 @@ class _SslState extends State<SslWidget> {
                         try {
                           await CertificateManager.importPkcs12(bytes, password);
                           if (context.mounted) {
-                            FlutterToastr.show(localizations.success, context);
+                            Toast.show(localizations.success, context);
                             Navigator.pop(context);
                           }
                         } catch (e, stackTrace) {
                           logger.e('import p12 error [$password]', error: e, stackTrace: stackTrace);
-                          if (context.mounted) FlutterToastr.show(localizations.importFailed, context);
+                          if (context.mounted) Toast.show(localizations.importFailed, context);
                           return;
                         }
                       },

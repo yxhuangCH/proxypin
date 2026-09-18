@@ -4,7 +4,7 @@ import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/ui/component/buttons.dart';
 import 'package:proxypin/utils/lang.dart';
 import 'package:proxypin/utils/platform.dart';
@@ -100,7 +100,7 @@ class _TimestampPageState extends State<TimestampPage> {
                 icon: Icon(Icons.copy, size: 18),
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: nowTimestamp.text));
-                  FlutterToastr.show(localizations.copied, context);
+                  Toast.show(localizations.copied, context);
                 })
           ]),
           SizedBox(height: 15),
@@ -186,7 +186,7 @@ class _TimestampPageState extends State<TimestampPage> {
         onPressed: () {
           if (timestampOut.text.isEmpty) return;
           Clipboard.setData(ClipboardData(text: timestampOut.text));
-          FlutterToastr.show(localizations.copied, context);
+          Toast.show(localizations.copied, context);
         });
   }
 
@@ -224,7 +224,7 @@ class _TimestampPageState extends State<TimestampPage> {
         onPressed: () {
           if (dateTimeOut.text.isEmpty) return;
           Clipboard.setData(ClipboardData(text: dateTimeOut.text));
-          FlutterToastr.show(localizations.copied, context);
+          Toast.show(localizations.copied, context);
         });
   }
 
@@ -240,9 +240,9 @@ class _TimestampPageState extends State<TimestampPage> {
         timestampOut.text = DateTime.fromMillisecondsSinceEpoch(int.parse(timestamp) * 1000).format();
         return;
       }
-      FlutterToastr.show('Invalid timestamp', context);
+      Toast.show('Invalid timestamp', context);
     } catch (e) {
-      FlutterToastr.show('Invalid timestamp', context);
+      Toast.show('Invalid timestamp', context);
     }
   }
 
@@ -252,7 +252,7 @@ class _TimestampPageState extends State<TimestampPage> {
       var date = DateTime.parse(dateTime);
       dateTimeOut.text = (date.millisecondsSinceEpoch ~/ 1000).toString();
     } catch (e) {
-      FlutterToastr.show('Invalid date time', context);
+      Toast.show('Invalid date time', context);
     }
   }
 }

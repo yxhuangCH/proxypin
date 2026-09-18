@@ -17,7 +17,7 @@
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/ui/component/buttons.dart';
 import 'package:proxypin/ui/component/text_field.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
@@ -170,7 +170,7 @@ class _RegExpPageState extends State<RegExpPage> {
                       });
                     });
                   } catch (e) {
-                    FlutterToastr.show('Invalid regular expression: $e', context, duration: 3);
+                    Toast.show('Invalid regular expression: $e', context, duration: 3);
                   }
                 },
                 style: Buttons.buttonStyle,
@@ -189,7 +189,7 @@ class _RegExpPageState extends State<RegExpPage> {
                   icon: Icon(Icons.copy, color: primaryColor, size: 18),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: resultInput!));
-                    FlutterToastr.show(localizations.copied, context, duration: 3);
+                    Toast.show(localizations.copied, context, duration: 3);
                   }),
             ]),
           if (resultInput != null) SizedBox(height: 5),

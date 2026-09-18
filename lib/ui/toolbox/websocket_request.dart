@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 
 import '../../utils/platform.dart';
 import '../component/app_dialog.dart';
@@ -144,12 +145,12 @@ class _WebSocketRequestPageState extends State<WebSocketRequestPage> {
     try {
       String? path;
       if (Platforms.isMobile()) {
-        final file = await FilePicker.pickFile();
-        if (file == null) return;
-        path = file.path;
+        final result = await FilePickerUtil.pickFiles(allowMultiple: false);
+        if (result == null || result.files.isEmpty) return;
+        path = result.files.single.path;
       } else {
-        final file = await FilePicker.pickFile();
-        path = file?.path;
+        final result = await FilePickerUtil.pickFiles(allowMultiple: false);
+        path = result?.files.single.path;
       }
       if (path == null) return;
       final file = File(path);

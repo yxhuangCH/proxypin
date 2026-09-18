@@ -17,11 +17,12 @@
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/components/manager/hosts_manager.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/ui/component/utils.dart';
@@ -333,14 +334,14 @@ class _HostsDialogState extends State<HostsDialog> {
       setState(() {
         items.clear();
       });
-      if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+      if (mounted) Toast.show(localizations.deleteSuccess, context);
     });
   }
 
   //导入
   Future<void> import() async {
     final FilePickerResult? result =
-        await FilePicker.pickFiles(allowedExtensions: ['json'], type: FileType.custom, initialDirectory: "/Downloads");
+        await FilePickerUtil.pickFiles(allowedExtensions: ['json'], type: FileType.custom, initialDirectory: "/Downloads");
     var file = result?.files.single;
     if (file == null) {
       return;
@@ -366,13 +367,13 @@ class _HostsDialogState extends State<HostsDialog> {
 
       saveConfig();
       if (mounted) {
-        FlutterToastr.show(localizations.importSuccess, context);
+        Toast.show(localizations.importSuccess, context);
       }
       setState(() {});
     } catch (e, t) {
       logger.e('导入失败 $file', error: e, stackTrace: t);
       if (mounted) {
-        FlutterToastr.show("${localizations.importFailed} $e", context);
+        Toast.show("${localizations.importFailed} $e", context);
       }
     }
   }
@@ -387,11 +388,11 @@ class _HostsDialogState extends State<HostsDialog> {
       var json = item.toJson();
       list.add(json);
     }
-    var path = await FilePicker.saveFile(fileName: fileName, bytes: utf8.encode(jsonEncode(list)));
+    var path = await FilePickerUtil.saveFile(fileName: fileName, bytes: utf8.encode(jsonEncode(list)));
     if (path == null) {
       return;
     }
-    if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+    if (mounted) Toast.show(localizations.exportSuccess, context);
   }
 }
 
@@ -490,9 +491,9 @@ class _HostsEditDialogState extends State<HostsEditDialog> {
           TextButton(
               onPressed: () {
                 if (!(formKey.currentState as FormState).validate()) {
-                  FlutterToastr.show(
+                  Toast.show(
                       "${localizations.domain} ${localizations.toAddress} ${localizations.cannotBeEmpty}", context,
-                      position: FlutterToastr.center);
+                      position: Toast.center);
                   return;
                 }
 

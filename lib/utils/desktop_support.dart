@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:proxypin/ui/configuration.dart';
@@ -8,6 +7,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../network/util/logger.dart';
 import '../ui/component/multi_window.dart';
+import 'package:proxypin/utils/platform.dart';
 
 class DesktopSupport {
   static const _minimumWindowSize = Size(1000, 600);
@@ -16,7 +16,7 @@ class DesktopSupport {
     try {
       await windowManager.ensureInitialized();
 
-      final defaultWindowSize = Platform.isMacOS ? const Size(1230, 750) : const Size(1100, 650);
+      final defaultWindowSize = Platforms.isMacOS() ? const Size(1230, 750) : const Size(1100, 650);
       final windowSize = _sanitizeWindowSize(appConfiguration.windowSize, defaultWindowSize);
       appConfiguration.windowSize = windowSize;
 

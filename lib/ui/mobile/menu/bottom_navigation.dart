@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
@@ -46,6 +45,7 @@ import '../../../network/components/manager/request_breakpoint_manager.dart';
 import '../../component/widgets.dart';
 import '../setting/proxy.dart';
 import '../setting/request_map.dart';
+import 'package:proxypin/utils/platform.dart';
 
 /// @author wanghongen
 /// 2024/9/30
@@ -157,12 +157,15 @@ class _ConfigPageState extends State<ConfigPage> {
                   trailing: arrow,
                   onTap: () => navigator(context, const MobileRequestCryptoPage())),
               Divider(height: 0, thickness: 0.3, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
-              ListTile(
-                  title: Text(localizations.script),
-                  leading: Icon(Icons.javascript_outlined, color: color),
-                  trailing: arrow,
-                  onTap: () => navigator(context, const MobileScript())),
-              Divider(height: 0, thickness: 0.3, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
+              // 鸿蒙 MVP 不支持脚本（flutter_js 无 ohos 原生库），隐藏入口
+              if (Platforms.supportScript())
+                ListTile(
+                    title: Text(localizations.script),
+                    leading: Icon(Icons.javascript_outlined, color: color),
+                    trailing: arrow,
+                    onTap: () => navigator(context, const MobileScript())),
+              if (Platforms.supportScript())
+                Divider(height: 0, thickness: 0.3, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
               ListTile(
                   title: Text(localizations.breakpoint),
                   leading: Icon(Icons.bug_report_outlined, color: color),
@@ -253,7 +256,7 @@ class SettingPage extends StatelessWidget {
                     title: '${localizations.proxy}${isCN ? '' : ' '}${localizations.port}',
                     textStyle: const TextStyle(fontSize: 16)),
                 Divider(height: 0, thickness: 0.3, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
-                if (Platform.isAndroid)
+                if (Platforms.isAndroid())
                   ListTile(
                       title: Text(localizations.systemProxy),
                       trailing: SwitchWidget(
@@ -263,7 +266,7 @@ class SettingPage extends StatelessWidget {
                             configuration.enableSystemProxy = value;
                             proxyServer.configuration.flushConfig();
                           })),
-                if (Platform.isAndroid)
+                if (Platforms.isAndroid())
                   Divider(height: 0, thickness: 0.3, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
                 ListTile(
                     title: const Text("SOCKS5"),

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/http/http.dart';
 import 'package:proxypin/storage/favorites.dart';
@@ -11,6 +11,7 @@ import 'package:proxypin/ui/component/utils.dart';
 import 'package:proxypin/utils/curl.dart';
 import 'package:proxypin/utils/platform.dart';
 import 'package:proxypin/utils/quick_share.dart';
+import 'package:proxypin/utils/share.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../utils/export_request.dart';
@@ -41,10 +42,10 @@ class ShareWidget extends StatelessWidget {
             child: Text(localizations.shareUrl),
             onTap: () async {
               if (request == null) {
-                FlutterToastr.show(localizations.emptyData, context);
+                Toast.show(localizations.emptyData, context);
                 return;
               }
-              SharePlus.instance.share(ShareParams(
+              ShareUtil.share(ShareParams(
                   text: request!.requestUrl,
                   subject: localizations.proxyPinSoftware,
                   sharePositionOrigin: await _sharePositionOrigin(context)));
@@ -55,13 +56,13 @@ class ShareWidget extends StatelessWidget {
               child: Text("${localizations.share} ${localizations.requestResponse}"),
               onTap: () async {
                 if (request == null) {
-                  FlutterToastr.show(localizations.emptyData, context);
+                  Toast.show(localizations.emptyData, context);
                   return;
                 }
                 var file = XFile.fromData(utf8.encode(copyRequest(request!, response)),
                     name: localizations.captureDetail, mimeType: "txt");
 
-                SharePlus.instance.share(ShareParams(
+                ShareUtil.share(ShareParams(
                     files: [file],
                     fileNameOverrides: ['request.txt'],
                     subject: localizations.proxyPinSoftware,
@@ -77,7 +78,7 @@ class ShareWidget extends StatelessWidget {
                 var text = curlRequest(request!);
                 var file = XFile.fromData(utf8.encode(text), name: "cURL.txt", mimeType: "txt");
 
-                SharePlus.instance.share(ShareParams(
+                ShareUtil.share(ShareParams(
                     files: [file],
                     fileNameOverrides: ["cURL.txt"],
                     subject: localizations.proxyPinSoftware,
@@ -91,8 +92,8 @@ class ShareWidget extends StatelessWidget {
                   return;
                 }
                 var text = copyAsFetch(request!);
-                SharePlus.instance
-                    .share(ShareParams(text: text, sharePositionOrigin: await _sharePositionOrigin(context)));
+                ShareUtil.share(
+                    ShareParams(text: text, sharePositionOrigin: await _sharePositionOrigin(context)));
               }),
           PopupMenuItem(
             enabled: QuickShareService.isRemoteConnected(proxyServer),
@@ -107,12 +108,12 @@ class ShareWidget extends StatelessWidget {
 
   Future<void> _quickShareToRemote(BuildContext context, AppLocalizations localizations) async {
     if (request == null) {
-      FlutterToastr.show(localizations.emptyData, context);
+      Toast.show(localizations.emptyData, context);
       return;
     }
 
     if (!QuickShareService.isRemoteConnected(proxyServer)) {
-      FlutterToastr.show('${localizations.notConnected} ${localizations.remoteDevice}', context);
+      Toast.show('${localizations.notConnected} ${localizations.remoteDevice}', context);
       return;
     }
 
@@ -122,9 +123,9 @@ class ShareWidget extends StatelessWidget {
     }
 
     if (success) {
-      FlutterToastr.show(localizations.requestSuccess, context);
+      Toast.show(localizations.requestSuccess, context);
     } else {
-      FlutterToastr.show('${localizations.send}${localizations.fail}', context);
+      Toast.show('${localizations.send}${localizations.fail}', context);
     }
   }
 
@@ -158,7 +159,7 @@ class DetailMenuWidget extends StatelessWidget {
                     if (request == null) return;
 
                     FavoriteStorage.addFavorite(request!);
-                    FlutterToastr.show(localizations.addSuccess, context);
+                    Toast.show(localizations.addSuccess, context);
                   }),
               PopupMenuItem(
                   child: Text(localizations.copy),
@@ -184,7 +185,7 @@ class DetailMenuWidget extends StatelessWidget {
                                       onTap: () {
                                         Clipboard.setData(ClipboardData(text: copyRawRequest(request!)));
                                         Navigator.of(dialogContext).pop();
-                                        FlutterToastr.show(localizations.copied, context);
+                                        Toast.show(localizations.copied, context);
                                       },
                                     ),
                                     ListTile(
@@ -194,7 +195,7 @@ class DetailMenuWidget extends StatelessWidget {
                                       onTap: () {
                                         Clipboard.setData(ClipboardData(text: curlRequest(request!)));
                                         Navigator.of(dialogContext).pop();
-                                        FlutterToastr.show(localizations.copied, context);
+                                        Toast.show(localizations.copied, context);
                                       },
                                     ),
                                     ListTile(
@@ -204,7 +205,7 @@ class DetailMenuWidget extends StatelessWidget {
                                       onTap: () {
                                         Clipboard.setData(ClipboardData(text: copyAsPythonRequests(request!)));
                                         Navigator.of(dialogContext).pop();
-                                        FlutterToastr.show(localizations.copied, context);
+                                        Toast.show(localizations.copied, context);
                                       },
                                     ),
                                     ListTile(
@@ -214,7 +215,7 @@ class DetailMenuWidget extends StatelessWidget {
                                       onTap: () {
                                         Clipboard.setData(ClipboardData(text: copyAsFetch(request!)));
                                         Navigator.of(dialogContext).pop();
-                                        FlutterToastr.show(localizations.copied, context);
+                                        Toast.show(localizations.copied, context);
                                       },
                                     ),
                                   ],

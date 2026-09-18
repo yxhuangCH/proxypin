@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import 'dart:io';
 
 import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +24,7 @@ import 'package:proxypin/ui/mobile/setting/report_servers.dart';
 import 'package:proxypin/ui/mobile/setting/ssl.dart';
 import 'package:proxypin/ui/mobile/widgets/highlight.dart';
 import 'package:proxypin/ui/mobile/widgets/remote_device.dart';
+import 'package:proxypin/utils/platform.dart';
 
 /// +号菜单
 class MoreMenu extends StatelessWidget {
@@ -57,7 +57,7 @@ class MoreMenu extends StatelessWidget {
                   onTap: () {
                     navigator(context, MobileSslWidget(proxyServer: proxyServer));
                   })),
-          if (Platform.isAndroid)
+          if (Platforms.supportAppFilter())
             PopupMenuItem(
                 height: 32,
                 child: ListTile(

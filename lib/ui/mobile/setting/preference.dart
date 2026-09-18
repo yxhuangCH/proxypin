@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +8,7 @@ import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/configuration.dart';
 import 'package:proxypin/ui/mobile/setting/theme.dart';
+import 'package:proxypin/utils/platform.dart';
 
 ///设置
 ///@author wanghongen
@@ -95,7 +95,7 @@ class _PreferenceState extends State<Preference> {
                         configuration.flushConfig();
                       })),
               Divider(height: 0, thickness: 0.3, color: dividerColor),
-              if (Platform.isAndroid) ...[
+              if (Platforms.isAndroid()) ...[
                 ListTile(
                     title: Text(localizations.windowMode),
                     subtitle: Text(localizations.windowModeSubTitle, style: const TextStyle(fontSize: 12)),

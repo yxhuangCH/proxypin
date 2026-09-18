@@ -17,10 +17,11 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/components/manager/request_rewrite_manager.dart';
 import 'package:proxypin/network/components/manager/rewrite_rule.dart';
 import 'package:proxypin/network/http/http.dart';
@@ -30,6 +31,7 @@ import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/mobile/setting/rewrite/rewrite_update.dart';
 import 'package:proxypin/utils/lang.dart';
 import 'package:proxypin/utils/platform.dart';
+import 'package:proxypin/utils/share.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -91,7 +93,7 @@ class _MobileRequestRewriteState extends State<MobileRequestRewrite> {
 
   //导入
   Future<void> import() async {
-    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.any);
+    FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.any);
     if (result == null || result.files.isEmpty) {
       return;
     }
@@ -108,13 +110,13 @@ class _MobileRequestRewriteState extends State<MobileRequestRewrite> {
       widget.requestRewrites.flushRequestRewriteConfig();
 
       if (mounted) {
-        FlutterToastr.show(localizations.importSuccess, context);
+        Toast.show(localizations.importSuccess, context);
       }
       setState(() {});
     } catch (e, t) {
       logger.e('导入失败 $file', error: e, stackTrace: t);
       if (mounted) {
-        FlutterToastr.show("${localizations.importFailed} $e", context);
+        Toast.show("${localizations.importFailed} $e", context);
       }
     }
   }
@@ -333,7 +335,7 @@ class _RequestRuleListState extends State<RequestRuleList> {
                 onPressed: () async {
                   await widget.requestRewrites.removeIndex([index]);
                   widget.requestRewrites.flushRequestRewriteConfig();
-                  if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+                  if (mounted) Toast.show(localizations.deleteSuccess, context);
                 }),
             Container(color: Theme.of(ctx).hoverColor, height: 8),
             TextButton(
@@ -376,8 +378,8 @@ class _RequestRuleListState extends State<RequestRuleList> {
     }
 
     final XFile file = XFile.fromData(utf8.encode(jsonEncode(list)), mimeType: 'config');
-    await SharePlus.instance
-        .share(ShareParams(files: [file], fileNameOverrides: [fileName], sharePositionOrigin: box?.paintBounds));
+    await ShareUtil.share(
+        ShareParams(files: [file], fileNameOverrides: [fileName], sharePositionOrigin: box?.paintBounds));
   }
 
   //删除
@@ -395,7 +397,7 @@ class _RequestRuleListState extends State<RequestRuleList> {
         multiple = false;
         selected.clear();
       });
-      if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+      if (mounted) Toast.show(localizations.deleteSuccess, context);
     });
   }
 }
@@ -476,7 +478,7 @@ class _RewriteRuleState extends State<RewriteRule> {
                 child: Text(localizations.save),
                 onPressed: () async {
                   if (!(formKey.currentState as FormState).validate()) {
-                    FlutterToastr.show(localizations.cannotBeEmpty, context, position: FlutterToastr.center);
+                    Toast.show(localizations.cannotBeEmpty, context, position: Toast.center);
                     return;
                   }
 
@@ -495,7 +497,7 @@ class _RewriteRuleState extends State<RewriteRule> {
                   }
                   requestRewrites.flushRequestRewriteConfig();
                   if (mounted) {
-                    FlutterToastr.show(localizations.saveSuccess, this.context);
+                    Toast.show(localizations.saveSuccess, this.context);
                     Navigator.of(this.context).pop(rule);
                   }
                 })

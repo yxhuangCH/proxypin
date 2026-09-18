@@ -22,7 +22,7 @@ import 'package:flutter/services.dart';
 import 'package:re_highlight/styles/atom-one-dark.dart';
 import 'package:re_highlight/styles/atom-one-light.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/channel/host_port.dart';
 import 'package:proxypin/network/components/manager/environment_manager.dart';
@@ -154,7 +154,7 @@ class RequestEditorState extends State<MobileRequestEditor> with SingleTickerPro
                           requestLineKey.currentState?.change(request?.requestUrl, request?.method);
                         });
                       } catch (e) {
-                        FlutterToastr.show(localizations.fail, context);
+                        Toast.show(localizations.fail, context);
                       }
                       Navigator.of(context).pop();
                     }),
@@ -266,10 +266,10 @@ class RequestEditorState extends State<MobileRequestEditor> with SingleTickerPro
       responseKey.currentState?.change(response);
       responseChange.value = 1;
 
-      // FlutterToastr.show(localizations.requestSuccess, context);
+      // Toast.show(localizations.requestSuccess, context);
     }).catchError((e) {
       responseChange.value = -1;
-      FlutterToastr.show('${localizations.fail}$e', context);
+      Toast.show('${localizations.fail}$e', context);
     });
 
     tabController.animateTo(1);
@@ -643,7 +643,7 @@ class _HttpState extends State<_HttpWidget> with SingleTickerProviderStateMixin,
                     final text = body?.text ?? '';
                     if (text.isEmpty) return;
                     Clipboard.setData(ClipboardData(text: text));
-                    FlutterToastr.show(localizations.copied, context);
+                    Toast.show(localizations.copied, context);
                   },
           ),
         ]));
@@ -682,7 +682,7 @@ class _HttpState extends State<_HttpWidget> with SingleTickerProviderStateMixin,
         formatted = XML.pretty(text);
         break;
       default:
-        FlutterToastr.show(
+        Toast.show(
             localizations.localeName == 'zh' ? '当前数据类型不支持美化' : 'Beautify is not supported for this type', context);
         return;
     }
@@ -888,7 +888,7 @@ class KeyValState extends State<KeyValWidget> with AutomaticKeepAliveClientMixin
     final text = '${keyVal.key}: ${keyVal.value}';
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    FlutterToastr.show(localizations.copied, context);
+    Toast.show(localizations.copied, context);
   }
 
   //刷新param

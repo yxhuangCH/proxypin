@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:proxypin/ui/component/utils.dart';
 import 'package:proxypin/utils/lang.dart';
@@ -91,7 +92,12 @@ class Websocket extends StatelessWidget {
                                           customItem: ContextMenuButtonItem(
                                             label: localizations.download,
                                             onPressed: () async {
-                                              String? path = (await FilePicker.saveFile(
+                                              // 鸿蒙 MVP：file_picker 无 ohos 实现，降级提示
+                                              if (Platforms.isOhos()) {
+                                                CustomToast.error('当前平台暂不支持下载').show(context);
+                                                return;
+                                              }
+                                              String? path = (await FilePickerUtil.saveFile(
                                                   fileName: "websocket.txt", bytes: message.payloadData));
                                               if (path != null && context.mounted) {
                                                 CustomToast.success(localizations.saveSuccess).show(context);

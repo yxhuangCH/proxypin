@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,6 +30,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 
 import '../request/list.dart';
+import 'package:proxypin/utils/platform.dart';
 
 /// @author wanghongen
 /// 2023/10/8
@@ -101,7 +101,7 @@ class _ToolbarState extends State<Toolbar> {
   @override
   Widget build(BuildContext context) {
     return Row(children: [
-      Padding(padding: EdgeInsets.only(left: Platform.isMacOS ? 83 : 20)),
+      Padding(padding: EdgeInsets.only(left: Platforms.isMacOS() ? 83 : 20)),
       SocketLaunch(proxyServer: widget.proxyServer, startup: widget.proxyServer.configuration.startup),
       const Padding(padding: EdgeInsets.only(left: 18)),
       IconButton(tooltip: localizations.clear, icon: const Icon(Icons.delete_outline, size: 21), onPressed: _onClear),

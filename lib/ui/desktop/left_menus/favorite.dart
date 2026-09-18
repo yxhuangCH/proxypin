@@ -21,11 +21,12 @@ import 'dart:io';
 import 'package:date_format/date_format.dart';
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/channel/host_port.dart';
 import 'package:proxypin/network/http/http.dart';
 import 'package:proxypin/network/http/http_client.dart';
@@ -184,19 +185,19 @@ class _FavoriteItemState extends State<_FavoriteItem> {
         popupItem(localizations.copyUrl, onTap: () {
           var requestUrl = request.requestUrl;
           Clipboard.setData(ClipboardData(text: requestUrl))
-              .then((value) => FlutterToastr.show(localizations.copied, context));
+              .then((value) => Toast.show(localizations.copied, context));
         }),
         popupItem(localizations.copyRequestResponse, onTap: () {
           Clipboard.setData(ClipboardData(text: copyRequest(request, request.response)))
-              .then((value) => FlutterToastr.show(localizations.copied, context));
+              .then((value) => Toast.show(localizations.copied, context));
         }),
         popupItem(localizations.copyCurl, onTap: () {
           Clipboard.setData(ClipboardData(text: curlRequest(request)))
-              .then((value) => FlutterToastr.show(localizations.copied, context));
+              .then((value) => Toast.show(localizations.copied, context));
         }),
         popupItem(localizations.copyAsPythonRequests, onTap: () {
           Clipboard.setData(ClipboardData(text: copyAsPythonRequests(request)))
-              .then((value) => FlutterToastr.show(localizations.copied, context));
+              .then((value) => Toast.show(localizations.copied, context));
         }),
         const PopupMenuDivider(height: 0.3),
         popupItem(localizations.repeat, onTap: () => onRepeat(request)),
@@ -239,7 +240,7 @@ class _FavoriteItemState extends State<_FavoriteItem> {
     HttpClients.proxyRequest(httpRequest, proxyInfo: proxyInfo);
 
     if (mounted) {
-      FlutterToastr.show(localizations.reSendRequest, context);
+      Toast.show(localizations.reSendRequest, context);
     }
   }
 
@@ -280,7 +281,7 @@ class _FavoriteItemState extends State<_FavoriteItem> {
   Future<void> requestEdit(HttpRequest request) async {
     var size = MediaQuery.of(context).size;
     var ratio = 1.0;
-    if (Platform.isWindows) {
+    if (Platforms.isWindows()) {
       ratio = WindowManager.instance.getDevicePixelRatio();
     }
 
@@ -349,7 +350,7 @@ class _FavoritesActions extends StatelessWidget {
                 //     final path = await FilePicker.platform.saveFile(fileName: 'favorites.har');
                 //     if (path == null) return;
                 //     await FavoriteStorage.exportToHarFile(path, title: localizations.favorites);
-                //     FlutterToastr.show(localizations.exportSuccess, context);
+                //     Toast.show(localizations.exportSuccess, context);
                 //   },
                 // ),
                 IconButton(
@@ -372,7 +373,7 @@ class _FavoritesActions extends StatelessWidget {
                   icon: const Icon(Icons.download_for_offline_outlined, size: 18),
                   onPressed: () async {
                     final result =
-                        await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['json', 'har']);
+                        await FilePickerUtil.pickFiles(type: FileType.custom, allowedExtensions: ['json', 'har']);
                     final file = result?.files.isNotEmpty == true ? result!.files.first : null;
                     if (file?.path == null) return;
 

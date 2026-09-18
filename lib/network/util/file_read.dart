@@ -45,7 +45,7 @@ class FileRead {
   }
 
   static Future<Uint8List> readFile(String path) async {
-    if (Platform.isIOS) {
+    if (Platforms.isIOS()) {
       var uuid = await iosUuid;
       //ios替换uuid
       var uuidPattern = RegExp(r'/Application/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/');

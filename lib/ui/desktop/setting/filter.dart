@@ -16,11 +16,12 @@
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/bin/configuration.dart';
 import 'package:proxypin/network/components/host_filter.dart';
 import 'package:proxypin/network/util/logger.dart';
@@ -161,7 +162,7 @@ class _DomainFilterState extends State<DomainFilter> {
 
   //导入
   Future<void> import() async {
-    final FilePickerResult? result = await FilePicker.pickFiles(
+    final FilePickerResult? result = await FilePickerUtil.pickFiles(
         allowedExtensions: ['config'], type: FileType.custom, initialDirectory: "/Downloads");
     var file = result?.files.single;
     if (file == null) {
@@ -176,13 +177,13 @@ class _DomainFilterState extends State<DomainFilter> {
 
       changed = true;
       if (mounted) {
-        FlutterToastr.show(localizations.importSuccess, context);
+        Toast.show(localizations.importSuccess, context);
       }
       setState(() {});
     } catch (e, t) {
       logger.e('导入失败 $file', error: e, stackTrace: t);
       if (mounted) {
-        FlutterToastr.show("${localizations.importFailed} $e", context);
+        Toast.show("${localizations.importFailed} $e", context);
       }
     }
   }
@@ -329,13 +330,13 @@ class _DomainListState extends State<DomainList> {
       String rule = widget.hostList.list[index].pattern.replaceAll(".*", "*");
       list.add(rule);
     }
-    String? saveLocation = (await FilePicker.saveFile(fileName: fileName, bytes: utf8.encode(jsonEncode(list))));
+    String? saveLocation = (await FilePickerUtil.saveFile(fileName: fileName, bytes: utf8.encode(jsonEncode(list))));
     if (saveLocation == null) {
       return;
     }
 
     if (mounted) {
-      FlutterToastr.show(localizations.exportSuccess, context);
+      Toast.show(localizations.exportSuccess, context);
     }
   }
 
@@ -349,7 +350,7 @@ class _DomainListState extends State<DomainList> {
       setState(() {
         selected.clear();
       });
-      if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+      if (mounted) Toast.show(localizations.deleteSuccess, context);
     });
   }
 
@@ -407,7 +408,7 @@ class _DomainListState extends State<DomainList> {
           child: Text(localizations.copy),
           onTap: () {
             Clipboard.setData(ClipboardData(text: widget.hostList.list[index].pattern.replaceAll(".*", "*")));
-            FlutterToastr.show(localizations.copied, context);
+            Toast.show(localizations.copied, context);
           }),
       PopupMenuItem(height: 35, child: Text(localizations.edit), onTap: () => showEdit(index)),
       PopupMenuItem(height: 35, onTap: () => export([index]), child: Text(localizations.export)),

@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -131,7 +130,7 @@ class _PCCertState extends State<PCCert> with TickerProviderStateMixin {
   }
 
   List<Widget> _buildChildren(BuildContext context) {
-    if (Platform.isMacOS || Platform.isWindows) {
+    if (Platforms.isMacOS() || Platforms.isWindows()) {
       return _buildWindowsAndMacContent(context);
     }
     return _buildLinuxContent(context);
@@ -143,9 +142,9 @@ class _PCCertState extends State<PCCert> with TickerProviderStateMixin {
 
     return [
       isCN
-          ? Text(" 安装证书到本系统，${Platform.isMacOS ? "安装完双击选择“始终信任此证书”。 如安装打开失败，请导出证书拖拽到系统证书里" : "选择“受信任的根证书颁发机构”"}")
+          ? Text(" 安装证书到本系统，${Platforms.isMacOS() ? "安装完双击选择“始终信任此证书”。 如安装打开失败，请导出证书拖拽到系统证书里" : "选择“受信任的根证书颁发机构”"}")
           : Text(
-              " Install certificate to this system，${Platform.isMacOS ? "After installation, double-click to select “Always Trust”。\n If installation and opening fail，Please export the certificate and drag it to the system certificate" : "choice“Trusted Root Certificate Authority”"}"),
+              " Install certificate to this system，${Platforms.isMacOS() ? "After installation, double-click to select “Always Trust”。\n If installation and opening fail，Please export the certificate and drag it to the system certificate" : "choice“Trusted Root Certificate Authority”"}"),
       const SizedBox(height: 10),
       SizedBox(
           width: double.maxFinite,
@@ -154,7 +153,7 @@ class _PCCertState extends State<PCCert> with TickerProviderStateMixin {
               style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
               child: Text(localizations.installRootCa))),
       const SizedBox(height: 10),
-      Platform.isMacOS
+      Platforms.isMacOS()
           ? Image.network("https://foruda.gitee.com/images/1689323260158189316/c2d881a4_1073801.png",
               width: 800, height: 500)
           : Row(children: [

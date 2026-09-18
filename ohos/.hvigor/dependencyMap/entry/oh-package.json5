@@ -1,0 +1,1 @@
+{"name":"entry","version":"1.0.0","description":"ProxyPin entry module","main":"","author":"","license":"Apache-2.0","dependencies":{"@ohos/flutter_ohos":"","url_launcher_ohos":"","shared_preferences_ohos":"","path_provider_ohos":"","flutter_native_arm64_v8a":""}}

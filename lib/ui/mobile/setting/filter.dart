@@ -18,16 +18,18 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/bin/configuration.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/ui/component/domain_add_dialog.dart';
 import 'package:proxypin/ui/component/utils.dart';
 import 'package:proxypin/utils/platform.dart';
+import 'package:proxypin/utils/share.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../network/components/host_filter.dart';
@@ -138,7 +140,7 @@ class _DomainFilterState extends State<DomainFilter> {
 
   //导入
   Future<void> import() async {
-    final FilePickerResult? result = await FilePicker.pickFiles(type: FileType.any);
+    final FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.any);
     if (result == null || result.files.isEmpty) {
       return;
     }
@@ -151,13 +153,13 @@ class _DomainFilterState extends State<DomainFilter> {
 
       changed = true;
       if (mounted) {
-        FlutterToastr.show(localizations.importSuccess, context);
+        Toast.show(localizations.importSuccess, context);
       }
       setState(() {});
     } catch (e, t) {
       logger.e('导入失败 $file', error: e, stackTrace: t);
       if (mounted) {
-        FlutterToastr.show("${localizations.importFailed} $e", context);
+        Toast.show("${localizations.importFailed} $e", context);
       }
     }
   }
@@ -340,7 +342,7 @@ class _DomainListState extends State<DomainList> {
                 CupertinoActionSheetAction(
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: widget.hostList.list[index].pattern.replaceAll(".*", "*")));
-                      FlutterToastr.show(localizations.copied, context);
+                      Toast.show(localizations.copied, context);
                       Navigator.of(context).pop();
                     },
                     child: Text(localizations.copy)),
@@ -396,7 +398,7 @@ class _DomainListState extends State<DomainList> {
     }
 
     final XFile file = XFile.fromData(utf8.encode(jsonEncode(list)), mimeType: 'config');
-    await SharePlus.instance.share(ShareParams(
+    await ShareUtil.share(ShareParams(
         files: [file],
         fileNameOverrides: [fileName],
         sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size));
@@ -414,7 +416,7 @@ class _DomainListState extends State<DomainList> {
         multiple = false;
         selected.clear();
       });
-      if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+      if (mounted) Toast.show(localizations.deleteSuccess, context);
     });
   }
 }

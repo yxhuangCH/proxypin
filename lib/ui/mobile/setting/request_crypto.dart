@@ -4,8 +4,9 @@ import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/components/manager/request_crypto_manager.dart';
 import 'package:proxypin/network/util/logger.dart';
@@ -331,13 +332,13 @@ class _MobileRequestCryptoPageState extends State<MobileRequestCryptoPage> {
         selected.clear();
       });
       _refreshConfig(force: true);
-      if (mounted) FlutterToastr.show(l10n.deleteSuccess, context);
+      if (mounted) Toast.show(l10n.deleteSuccess, context);
     });
   }
 
   Future<void> _import(RequestCryptoManager manager) async {
     try {
-      FilePickerResult? result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+      FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
       final path = result?.files.single.path;
       if (path == null) return;
       final content = await File(path).readAsString();
@@ -349,10 +350,10 @@ class _MobileRequestCryptoPageState extends State<MobileRequestCryptoPage> {
       changed = true;
       setState(() {});
       _refreshConfig(force: true);
-      FlutterToastr.show(localizations.importSuccess, context);
+      Toast.show(localizations.importSuccess, context);
     } catch (e) {
       logger.e('导入失败', error: e);
-      if (mounted) FlutterToastr.show('${localizations.importFailed} $e', context);
+      if (mounted) Toast.show('${localizations.importFailed} $e', context);
     }
   }
 
@@ -364,12 +365,12 @@ class _MobileRequestCryptoPageState extends State<MobileRequestCryptoPage> {
           : (indexes.toList()..sort());
       final data = keys.map((i) => manager.rules[i].toJson()).toList();
       var bytes = utf8.encode(jsonEncode(data));
-      final path = await FilePicker.saveFile(fileName: 'request_crypto.json', bytes: bytes);
+      final path = await FilePickerUtil.saveFile(fileName: 'request_crypto.json', bytes: bytes);
       if (path == null) return;
-      if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+      if (mounted) Toast.show(localizations.exportSuccess, context);
     } catch (e) {
       logger.e('导出失败', error: e);
-      if (mounted) FlutterToastr.show('Export failed: $e', context);
+      if (mounted) Toast.show('Export failed: $e', context);
     }
   }
 }
@@ -725,7 +726,7 @@ class _MobileCryptoRuleEditPageState extends State<MobileCryptoRuleEditPage> {
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
-      FlutterToastr.show(l10n.cannotBeEmpty, context, position: FlutterToastr.center);
+      Toast.show(l10n.cannotBeEmpty, context, position: Toast.center);
       return;
     }
 
@@ -769,7 +770,7 @@ class _MobileCryptoRuleEditPageState extends State<MobileCryptoRuleEditPage> {
     await manager.flushConfig();
 
     if (!mounted) return;
-    FlutterToastr.show(l10n.saveSuccess, context);
+    Toast.show(l10n.saveSuccess, context);
     Navigator.of(context).pop(updated);
   }
 }

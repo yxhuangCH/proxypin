@@ -3,8 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/components/manager/request_breakpoint_manager.dart';
 import 'package:proxypin/network/http/http.dart';
@@ -192,18 +193,18 @@ class _RequestBreakpointPageState extends State<MobileRequestBreakpointPage> {
           : (indexes.toList()..sort());
       final data = keys.map((i) => rules[i].toJson()).toList();
       var bytes = utf8.encode(jsonEncode(data));
-      final path = await FilePicker.saveFile(fileName: 'request_breakpoints.json', bytes: bytes);
+      final path = await FilePickerUtil.saveFile(fileName: 'request_breakpoints.json', bytes: bytes);
       if (path == null) return;
-      if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+      if (mounted) Toast.show(localizations.exportSuccess, context);
     } catch (e) {
       logger.e('导出失败', error: e);
-      if (mounted) FlutterToastr.show('Export failed: $e', context);
+      if (mounted) Toast.show('Export failed: $e', context);
     }
   }
 
   Future<void> _import() async {
     try {
-      FilePickerResult? result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+      FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
       if (result == null || result.files.isEmpty) return;
       File file = File(result.files.single.path!);
       String content = await file.readAsString();
@@ -217,10 +218,10 @@ class _RequestBreakpointPageState extends State<MobileRequestBreakpointPage> {
         rules = manager.list;
       });
 
-      if (mounted) FlutterToastr.show(localizations.importSuccess, context);
+      if (mounted) Toast.show(localizations.importSuccess, context);
     } catch (e) {
       logger.e('Import failed', error: e);
-      if (mounted) FlutterToastr.show(localizations.importFailed, context);
+      if (mounted) Toast.show(localizations.importFailed, context);
     }
   }
 

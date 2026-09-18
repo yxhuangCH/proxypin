@@ -9,7 +9,7 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/components/manager/environment_manager.dart';
 import 'package:proxypin/network/util/random.dart';
@@ -159,10 +159,10 @@ class _MobileEnvironmentPageState extends State<MobileEnvironmentPage> {
     final url = localizations.localeName.startsWith('zh') ? cn : en;
     try {
       if (!await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)) {
-        if (mounted) FlutterToastr.show('Open guide failed', context);
+        if (mounted) Toast.show('Open guide failed', context);
       }
     } catch (_) {
-      if (mounted) FlutterToastr.show('Open guide failed', context);
+      if (mounted) Toast.show('Open guide failed', context);
     }
   }
 

@@ -16,7 +16,7 @@
 import 'package:code_forge/code_forge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/http/http.dart';
 import 'package:proxypin/ui/component/search/highlight_text.dart';
@@ -85,7 +85,7 @@ class _HeadersWidgetState extends State<HeadersWidget> {
           : () async {
               await Clipboard.setData(ClipboardData(text: text));
               if (!context.mounted) return;
-              FlutterToastr.show(localizations.copied, context);
+              Toast.show(localizations.copied, context);
             },
       icon: Icon(Icons.copy, color: Theme.of(context).iconTheme.color),
     );

@@ -1,13 +1,14 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:code_forge/code_forge.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:re_highlight/styles/monokai-sublime.dart';
 import 'package:flutter_js/flutter_js.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/ui/component/search/finder.dart';
 import 'package:proxypin/utils/platform.dart';
 import 'package:re_highlight/languages/javascript.dart';
@@ -99,7 +100,7 @@ class _JavaScriptState extends State<JavaScript> {
                   ElevatedButton.icon(
                       onPressed: () async {
                         FilePickerResult? result =
-                            await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['js']);
+                            await FilePickerUtil.pickFiles(type: FileType.custom, allowedExtensions: ['js']);
                         final path = result?.files.single.path;
 
                         if (path != null) {
@@ -155,7 +156,7 @@ class _JavaScriptState extends State<JavaScript> {
                     icon: Icon(Icons.copy, color: primaryColor, size: 18),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: outLines.join("\n")));
-                      FlutterToastr.show(localizations.copied, context, duration: 3);
+                      Toast.show(localizations.copied, context, duration: 3);
                     }),
               ]),
               Expanded(

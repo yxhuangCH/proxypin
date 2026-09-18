@@ -2,7 +2,7 @@
  * 上报服务器配置页面
  */
 import 'package:flutter/material.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/components/manager/report_server_manager.dart';
 import 'package:proxypin/ui/component/utils.dart';
 import 'package:proxypin/ui/component/widgets.dart';
@@ -49,10 +49,10 @@ class _ReportServersPageState extends State<ReportServersPage> {
     final uri = Uri.parse(url);
     try {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        FlutterToastr.show('Open guide failed', context);
+        Toast.show('Open guide failed', context);
       }
     } catch (e) {
-      FlutterToastr.show('Open guide failed: $e', context);
+      Toast.show('Open guide failed: $e', context);
     }
   }
 
@@ -237,8 +237,8 @@ class _ReportServersPageState extends State<ReportServersPage> {
               FilledButton(
                 onPressed: () {
                   if (!(formKey.currentState as FormState).validate()) {
-                    FlutterToastr.show("${localizations.serverUrl} ${localizations.cannotBeEmpty}", context,
-                        position: FlutterToastr.top);
+                    Toast.show("${localizations.serverUrl} ${localizations.cannotBeEmpty}", context,
+                        position: Toast.top);
                     return;
                   }
 

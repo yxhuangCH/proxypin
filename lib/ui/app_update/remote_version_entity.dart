@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:proxypin/utils/lang.dart';
+import 'package:proxypin/utils/platform.dart';
 
 /// GitHub release 的单个资产（可下载文件）
 class ReleaseAsset {
@@ -61,7 +62,7 @@ class RemoteVersionEntity {
       return keywords.any((k) => lower.contains(k));
     }
 
-    if (Platform.isMacOS) {
+    if (Platforms.isMacOS()) {
       final zip = assets.where((a) => a.installerType == 'zip' && nameMatches(a, ['mac', 'macos', 'darwin', 'osx']));
       if (zip.isNotEmpty) return zip.first;
       final dmg = assets.where((a) => a.installerType == 'dmg');
@@ -69,7 +70,7 @@ class RemoteVersionEntity {
       return null;
     }
 
-    if (Platform.isWindows) {
+    if (Platforms.isWindows()) {
       // Win7 检测: Windows 6.x 开头为 Win7 / Win8 (含 6.1=Win7)
       final isWin7 = Platform.operatingSystemVersion.startsWith('Windows 6.');
       final zips = assets.where((a) => a.installerType == 'zip' && nameMatches(a, ['win', 'windows']));

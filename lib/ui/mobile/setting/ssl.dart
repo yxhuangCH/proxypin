@@ -17,9 +17,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/native/native_method.dart';
 import 'package:proxypin/network/bin/server.dart';
@@ -30,7 +31,9 @@ import 'package:proxypin/storage/local_storage.dart';
 import 'package:proxypin/storage/shared_preference_keys.dart';
 import 'package:proxypin/ui/component/utils.dart';
 import 'package:proxypin/ui/mobile/menu/drawer.dart';
+import 'package:proxypin/utils/ip.dart';
 import 'package:proxypin/utils/lang.dart';
+import 'package:proxypin/utils/platform.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MobileSslWidget extends StatefulWidget {
@@ -53,7 +56,7 @@ class _MobileSslState extends State<MobileSslWidget> {
   @override
   void initState() {
     super.initState();
-    if (Platform.isIOS && _trusted != true) {
+    if (Platforms.isIOS() && _trusted != true) {
       _refreshStatus();
     }
   }
@@ -62,7 +65,7 @@ class _MobileSslState extends State<MobileSslWidget> {
     setState(() => _loading = true);
     try {
       final caPem = await CertificateManager.certificatePem();
-      if (Platform.isIOS) {
+      if (Platforms.isIOS()) {
         final installedByKeychain = await NativeMethod.isCaInstalled(caPem);
         _trusted = await evaluateChainTrusted(caPem);
         _installed = installedByKeychain || _trusted;
@@ -102,7 +105,7 @@ class _MobileSslState extends State<MobileSslWidget> {
           centerTitle: true,
         ),
         body: ListView(padding: const EdgeInsets.all(12), children: [
-          if (Platform.isIOS)
+          if (Platforms.isIOS())
             (_loading)
                 ? const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()))
                 : CertStatusCard(installed: _installed, trusted: _trusted, proxyServer: widget.proxyServer),
@@ -127,10 +130,12 @@ class _MobileSslState extends State<MobileSslWidget> {
                   Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => Platform.isIOS
+                          builder: (_) => Platforms.isIOS()
                               ? IosCaInstall(proxyServer: widget.proxyServer)
-                              : const AndroidCaInstall())).whenComplete(() {
-                    if (Platform.isIOS && !_trusted) _refreshStatus();
+                              : Platforms.isOhos()
+                                  ? OhosCaGuide(proxyServer: widget.proxyServer)
+                                  : const AndroidCaInstall())).whenComplete(() {
+                    if (Platforms.isIOS() && !_trusted) _refreshStatus();
                   });
                 }),
           ]),
@@ -164,8 +169,8 @@ class _MobileSslState extends State<MobileSslWidget> {
                   showConfirmDialog(context, title: localizations.generateCA, content: localizations.generateCADescribe,
                       onConfirm: () async {
                     await CertificateManager.generateNewRootCA();
-                    if (context.mounted) FlutterToastr.show(localizations.success, context);
-                    if (Platform.isIOS) _refreshStatus();
+                    if (context.mounted) Toast.show(localizations.success, context);
+                    if (Platforms.isIOS()) _refreshStatus();
                   });
                 }),
             Divider(height: 0, thickness: 0.3, color: dividerColor),
@@ -176,8 +181,8 @@ class _MobileSslState extends State<MobileSslWidget> {
                       title: localizations.resetDefaultCA,
                       content: localizations.resetDefaultCADescribe, onConfirm: () async {
                     await CertificateManager.resetDefaultRootCA();
-                    if (context.mounted) FlutterToastr.show(localizations.success, context);
-                    if (Platform.isIOS) _refreshStatus();
+                    if (context.mounted) Toast.show(localizations.success, context);
+                    if (Platforms.isIOS()) _refreshStatus();
                   });
                 }),
           ]),
@@ -185,7 +190,7 @@ class _MobileSslState extends State<MobileSslWidget> {
   }
 
   void importPk12() async {
-    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['p12', 'pfx']);
+    FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.custom, allowedExtensions: ['p12', 'pfx']);
     if (result == null || !mounted) return;
     //entry password
     showDialog(
@@ -211,12 +216,12 @@ class _MobileSslState extends State<MobileSslWidget> {
                   try {
                     await CertificateManager.importPkcs12(bytes, password);
                     if (context.mounted) {
-                      FlutterToastr.show(localizations.success, context);
+                      Toast.show(localizations.success, context);
                       Navigator.pop(context);
                     }
                   } catch (e, stackTrace) {
                     logger.e('import p12 error [$password]', error: e, stackTrace: stackTrace);
-                    if (context.mounted) FlutterToastr.show(localizations.importFailed, context);
+                    if (context.mounted) Toast.show(localizations.importFailed, context);
                     return;
                   }
                 },
@@ -262,7 +267,7 @@ class _MobileSslState extends State<MobileSslWidget> {
   }
 
   void _exportFile(String name, {File? file, Uint8List? bytes}) async {
-    if (Platform.isIOS) {
+    if (Platforms.isIOS()) {
       await widget.proxyServer.retryBind();
       final url = Uri.parse("http://127.0.0.1:${widget.proxyServer.port}/ssl");
       launchUrl(url, mode: LaunchMode.externalApplication);
@@ -272,11 +277,11 @@ class _MobileSslState extends State<MobileSslWidget> {
     bytes ??= await file!.readAsBytes();
 
     String? outputFile =
-        await FilePicker.saveFile(dialogTitle: 'Please select the path to save:', fileName: name, bytes: bytes);
+        await FilePickerUtil.saveFile(dialogTitle: 'Please select the path to save:', fileName: name, bytes: bytes);
 
     if (outputFile != null && mounted) {
       AppLocalizations localizations = AppLocalizations.of(context)!;
-      FlutterToastr.show(localizations.success, context);
+      Toast.show(localizations.success, context);
     }
   }
 }
@@ -402,12 +407,12 @@ class _AndroidCaInstallState extends State<AndroidCaInstall> with SingleTickerPr
 
   void _downloadCert(String name) async {
     var caFile = await CertificateManager.certificateFile();
-    String? outputFile = await FilePicker.saveFile(
+    String? outputFile = await FilePickerUtil.saveFile(
         dialogTitle: 'Please select the path to save:', fileName: name, bytes: await caFile.readAsBytes());
 
     if (outputFile != null && mounted) {
       AppLocalizations localizations = AppLocalizations.of(context)!;
-      FlutterToastr.show(localizations.success, context);
+      Toast.show(localizations.success, context);
     }
   }
 
@@ -430,7 +435,7 @@ class _AndroidCaInstallState extends State<AndroidCaInstall> with SingleTickerPr
       logger.d('Auto install cert result: ${result.stdout}, ${result.stderr}');
       if (!mounted) return;
       if (result.exitCode != 0) {
-        FlutterToastr.show(
+        Toast.show(
             !isCN
                 ? 'Certificate install failed. Please check root and /system write permission, or use Magisk module.'
                 : '证书安装失败，请确认Root权限和system写权限，或参考Magisk模块安装。',
@@ -439,7 +444,7 @@ class _AndroidCaInstallState extends State<AndroidCaInstall> with SingleTickerPr
             duration: 5);
         return;
       }
-      FlutterToastr.show(
+      Toast.show(
         !isCN ? 'Certificate installed, reboot required' : '证书已安装，重启手机后生效',
         context,
         rootNavigator: true,
@@ -447,7 +452,7 @@ class _AndroidCaInstallState extends State<AndroidCaInstall> with SingleTickerPr
       );
     } catch (e) {
       logger.d('auto install cert error：$e');
-      FlutterToastr.show(
+      Toast.show(
           !isCN
               ? 'Auto install failed: $e. Please check root and /system write permission, or use Magisk module.'
               : '自动安装失败：$e，请确认Root和system写权限，或参考Magisk模块安装。',
@@ -480,7 +485,7 @@ class IOSCertChecker {
   static bool checked = false;
 
   static void check(BuildContext context) async {
-    if (checked || !Platform.isIOS) {
+    if (checked || !Platforms.isIOS()) {
       return;
     }
     logger.d("[IosCertChecker] checking iOS CA status");
@@ -592,6 +597,69 @@ class CertStatusCard extends StatelessWidget {
   }
 }
 
+/// 鸿蒙端证书引导页
+/// 鸿蒙设备作为局域网代理服务端，本机无需安装 CA；
+/// 引导用户在被调试设备上设置代理后下载安装证书。
+class OhosCaGuide extends StatefulWidget {
+  final ProxyServer proxyServer;
+
+  const OhosCaGuide({super.key, required this.proxyServer});
+
+  @override
+  State<OhosCaGuide> createState() => _OhosCaGuideState();
+}
+
+class _OhosCaGuideState extends State<OhosCaGuide> {
+  String? _ip;
+
+  AppLocalizations get localizations => AppLocalizations.of(context)!;
+
+  @override
+  void initState() {
+    super.initState();
+    localIp().then((ip) {
+      if (mounted) setState(() => _ip = ip);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isCN = localizations.localeName == 'zh';
+    final ip = _ip ?? '...';
+    final port = widget.proxyServer.port;
+
+    return Scaffold(
+        appBar: AppBar(centerTitle: true, title: Text(localizations.installRootCa, style: const TextStyle(fontSize: 16))),
+        body: ListView(padding: const EdgeInsets.all(12), children: [
+          Text(
+              isCN
+                  ? '本设备作为代理服务端，无需安装证书。请在被调试设备上完成以下步骤：'
+                  : 'This device acts as the proxy server and does not need the CA. Follow these steps on the device to be debugged:',
+              style: const TextStyle(fontWeight: FontWeight.w500)),
+          const SizedBox(height: 12),
+          SelectableText(isCN
+              ? '1. 被调试设备与本设备连接同一局域网，Wi-Fi 代理设置为 $ip:$port'
+              : '1. Connect the debugged device to the same LAN, set Wi-Fi proxy to $ip:$port'),
+          const SizedBox(height: 10),
+          SelectableText(isCN
+              ? '2. 被调试设备浏览器访问 http://proxy.pin/ssl 下载 CA 证书'
+              : '2. Open http://proxy.pin/ssl in the browser of the debugged device to download the CA'),
+          const SizedBox(height: 10),
+          SelectableText(isCN
+              ? '3. 安装并信任该 CA 证书（Android/iOS/Windows/macOS 各自安装方式）'
+              : '3. Install and trust the CA (per the debugged device platform)'),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+              icon: const Icon(Icons.copy, size: 16),
+              label: Text('http://proxy.pin/ssl'),
+              onPressed: () {
+                Clipboard.setData(const ClipboardData(text: 'http://proxy.pin/ssl'));
+                Toast.show(localizations.copied, context);
+              }),
+        ]));
+  }
+}
+
 class IosCaInstall extends StatefulWidget {
   final ProxyServer proxyServer;
 
@@ -620,7 +688,7 @@ class _IosCaInstallState extends State<IosCaInstall> {
     try {
       certDetails = CertificateManager.caCert ?? await CertificateManager.getCertificateDetails();
       final caPem = await CertificateManager.certificatePem();
-      if (Platform.isIOS) {
+      if (Platforms.isIOS()) {
         trusted = await evaluateChainTrusted(caPem);
         // Installation check: best-effort keychain lookup; if chain trusted, consider installed
         final installedByKeychain = await NativeMethod.isCaInstalled(caPem);
@@ -654,7 +722,7 @@ class _IosCaInstallState extends State<IosCaInstall> {
       if (!mounted) {
         return;
       }
-      FlutterToastr.show(localizations.copied, context);
+      Toast.show(localizations.copied, context);
     });
   }
 

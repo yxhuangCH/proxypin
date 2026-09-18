@@ -1,0 +1,8 @@
+# ohos 构建产物与本地配置
+.cxx/
+.build/
+build/
+oh_modules/
+local.properties
+.idea/
+*.har

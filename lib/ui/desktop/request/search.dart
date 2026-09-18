@@ -21,6 +21,7 @@ import 'package:proxypin/network/http/content_type.dart';
 import 'package:proxypin/ui/component/search_condition.dart';
 
 import '../../component/model/search_model.dart';
+import 'package:proxypin/utils/platform.dart';
 
 /// @author wanghongen
 /// 2023/10/8
@@ -102,7 +103,7 @@ class SearchState extends State<Search> {
     bool isCN = AppLocalizations.of(context)!.localeName == 'zh';
     var height = MediaQuery.of(context).size.height;
     height = !isCN ? height - 501 : height - 468;
-    if (Platform.isMacOS) {
+    if (Platforms.isMacOS()) {
       height -= 30;
     }
     showMenu(

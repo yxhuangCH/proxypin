@@ -73,7 +73,7 @@ class ProxyServer {
       return;
     }
 
-    if (configuration.enableSystemProxy) {
+    if (configuration.enableSystemProxy && Platforms.supportSystemProxy()) {
       SystemProxy.setSslProxyEnable(enableSsl, port);
     }
   }
@@ -106,7 +106,7 @@ class ProxyServer {
     return server.bind(port).then((serverSocket) {
       logger.i("listen on $port");
       this.server = server;
-      if (configuration.enableSystemProxy) {
+      if (configuration.enableSystemProxy && Platforms.supportSystemProxy()) {
         setSystemProxyEnable(true);
       }
 
@@ -122,7 +122,7 @@ class ProxyServer {
       return server;
     }
 
-    if (configuration.enableSystemProxy) {
+    if (configuration.enableSystemProxy && Platforms.supportSystemProxy()) {
       await setSystemProxyEnable(false);
     }
     logger.i("stop on $port");

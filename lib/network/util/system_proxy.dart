@@ -20,6 +20,7 @@ import 'package:proxypin/network/channel/host_port.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/utils/ip.dart';
 import 'package:proxypin/utils/lang.dart';
+import 'package:proxypin/utils/platform.dart';
 import 'package:proxy_manager/proxy_manager.dart';
 
 /// @author wanghongen
@@ -30,11 +31,11 @@ class SystemProxy {
   ///单例
   static SystemProxy get instance {
     if (_instance == null) {
-      if (Platform.isMacOS) {
+      if (Platforms.isMacOS()) {
         _instance = MacSystemProxy();
-      } else if (Platform.isWindows) {
+      } else if (Platforms.isWindows()) {
         _instance = WindowsSystemProxy();
-      } else if (Platform.isLinux) {
+      } else if (Platforms.isLinux()) {
         _instance = LinuxSystemProxy();
       } else {
         _instance = SystemProxy();
@@ -45,20 +46,6 @@ class SystemProxy {
 
   ///获取代理忽略地址
   static String get proxyPassDomains {
-    if (Platform.isMacOS) {
-      return '';
-    }
-    if (Platform.isWindows) {
-      return '';
-    }
-
-    if (Platform.isAndroid) {
-      return '';
-    }
-    if (Platform.isIOS) {
-      return '';
-    }
-
     return '';
   }
 

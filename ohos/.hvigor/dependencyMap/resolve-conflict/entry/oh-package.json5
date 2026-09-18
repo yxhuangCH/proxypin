@@ -1,0 +1,17 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "ProxyPin entry module",
+  "main": "",
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@ohos/flutter_ohos": "/Users/yxhuang/dev/flutter_ohos/bin/cache/artifacts/engine/ohos-arm64-release/flutter_embedding_release.har",
+    "url_launcher_ohos": "/Users/yxhuang/.pub-cache/hosted/pub.flutter-io.cn/url_launcher_ohos-6.3.0/ohos",
+    "shared_preferences_ohos": "/Users/yxhuang/.pub-cache/hosted/pub.flutter-io.cn/shared_preferences_ohos-2.2.0/ohos",
+    "path_provider_ohos": "/Users/yxhuang/.pub-cache/hosted/pub.flutter-io.cn/path_provider_ohos-2.2.1/ohos",
+    "flutter_native_arm64_v8a": "/Users/yxhuang/dev/flutter_ohos/bin/cache/artifacts/engine/ohos-arm64-release/arm64_v8a_release.har"
+  },
+  "devDependencies": {},
+  "dynamicDependencies": {}
+}

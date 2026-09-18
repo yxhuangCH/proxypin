@@ -33,6 +33,7 @@ import 'package:proxypin/storage/histories.dart';
 import 'package:proxypin/utils/har.dart';
 
 import '../components/host_filter.dart';
+import 'package:proxypin/utils/platform.dart';
 
 class ProxyHelper {
   static const Duration _remoteHistoryBatchTtl = Duration(minutes: 5);
@@ -146,7 +147,7 @@ class ProxyHelper {
     var response = HttpResponse(HttpStatus.ok, protocolVersion: msg.protocolVersion);
     response.body = utf8.encode('pong');
     response.headers.set("os", Platform.operatingSystem);
-    response.headers.set("hostname", Platform.isAndroid ? Platform.operatingSystem : Platform.localHostname);
+    response.headers.set("hostname", Platforms.isAndroid() ? Platform.operatingSystem : Platform.localHostname);
     channel.writeAndClose(channelContext, response);
   }
 

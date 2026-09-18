@@ -1,0 +1,87 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/yxhuang/.ohos/config/default_ohos_flyBVZd63e1yjLpTYXbKEh4KT9B4szA2-yhhNAZMy70=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BCF92C61874214889AB7E0394CF15F1788D6EF9C0C1BF06996B5CC5F3EE48F49E398AD0AB201D2A",
+          "profile": "/Users/yxhuang/.ohos/config/default_ohos_flyBVZd63e1yjLpTYXbKEh4KT9B4szA2-yhhNAZMy70=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/yxhuang/.ohos/config/default_ohos_flyBVZd63e1yjLpTYXbKEh4KT9B4szA2-yhhNAZMy70=.p12",
+          "storePassword": "0000001B08B44CEC99929035FBEF6589AFE45546D7DEA8EC9A46D0B5FA84D6989535CC456D2CA82C5C4FCE"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compileSdkVersion": "6.1.1(24)",
+        "compatibleSdkVersion": "6.0.0(20)",
+        "runtimeOS": "HarmonyOS",
+        "targetSdkVersion": "6.0.0(20)"
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "url_launcher_ohos",
+      "srcPath": "../../../.pub-cache/hosted/pub.flutter-io.cn/url_launcher_ohos-6.3.0/ohos",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "shared_preferences_ohos",
+      "srcPath": "../../../.pub-cache/hosted/pub.flutter-io.cn/shared_preferences_ohos-2.2.0/ohos",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "path_provider_ohos",
+      "srcPath": "../../../.pub-cache/hosted/pub.flutter-io.cn/path_provider_ohos-2.2.1/ohos",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

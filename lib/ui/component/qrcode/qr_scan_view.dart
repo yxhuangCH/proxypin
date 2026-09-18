@@ -1,14 +1,21 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:flutter_qr_reader_plus/flutter_qr_reader.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:proxypin/network/util/logger.dart';
+import 'package:proxypin/utils/platform.dart';
 
 ///@Author: Hongen Wang
 /// qr code scanner
 class QrCodeScanner {
   static Future<String?> scan(BuildContext context) async {
+    // 鸿蒙 MVP 不支持扫码（flutter_qr_reader_plus 无 ohos 实现），二期接入鸿蒙 Scan Kit
+    if (Platforms.isOhos()) {
+      return null;
+    }
+
     var status = await Permission.camera.status;
 
     if (!status.isGranted) {
@@ -199,9 +206,9 @@ class _QrReaderViewState extends State<QeCodeScanView> with TickerProviderStateM
                   children: <Widget>[
                     IconButton(
                       onPressed: () async {
-                        final file = await FilePicker.pickFile(type: FileType.image);
-                        if (file == null) return;
-                        final path = file.path;
+                        final result = await FilePickerUtil.pickFiles(type: FileType.image, allowMultiple: false);
+                        if (result == null || result.files.isEmpty) return;
+                        final path = result.files.single.path;
                         if (path == null) return;
                         scanImage(path);
                       },

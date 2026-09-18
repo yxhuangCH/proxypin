@@ -74,10 +74,10 @@ class AppConfiguration {
   bool upgradeNoticeV30 = true;
 
   /// 是否启用画中画
-  ValueNotifier<bool> pipEnabled = ValueNotifier(Platform.isAndroid);
+  ValueNotifier<bool> pipEnabled = ValueNotifier(Platforms.isAndroid());
 
   /// 显示画中画图标
-  ValueNotifier<bool> pipIcon = ValueNotifier(Platform.isAndroid);
+  ValueNotifier<bool> pipIcon = ValueNotifier(Platforms.isAndroid());
 
   /// Headers展示模式: table(逐行) / text(原始文本)
   String headerViewMode = "table";
