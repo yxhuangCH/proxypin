@@ -22,7 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/ui/component/context_menu.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/components/manager/script_manager.dart';
 import 'package:proxypin/network/channel/host_port.dart';
@@ -49,6 +49,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../../../utils/export_request.dart';
 import '../common.dart';
+import 'package:proxypin/utils/platform.dart';
 
 /// 请求 URI
 /// @author wanghongen
@@ -327,7 +328,7 @@ class _RequestWidgetState extends State<RequestWidget> {
         break;
       case _RequestMenuAction.favorite:
         FavoriteStorage.addFavorite(widget.request);
-        FlutterToastr.show(localizations.operationSuccess, context, rootNavigator: true);
+        Toast.show(localizations.operationSuccess, context, rootNavigator: true);
         break;
       case _RequestMenuAction.select:
         widget.multiSelectController.selectOnly(widget.request.requestId);
@@ -407,7 +408,7 @@ class _RequestWidgetState extends State<RequestWidget> {
   Future<void> _copyText(String text) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
-      FlutterToastr.show(localizations.copied, rootNavigator: true, context);
+      Toast.show(localizations.copied, rootNavigator: true, context);
     }
   }
 
@@ -491,7 +492,7 @@ class _RequestWidgetState extends State<RequestWidget> {
     var request = httpRequest.copy(uri: httpRequest.requestUrl);
     var proxyInfo = widget.proxyServer.isRunning ? ProxyInfo.of("127.0.0.1", widget.proxyServer.port) : null;
     HttpClients.proxyRequest(request, proxyInfo: proxyInfo);
-    FlutterToastr.show(localizations.reSendRequest, context, rootNavigator: true);
+    Toast.show(localizations.reSendRequest, context, rootNavigator: true);
   }
 
   PopupMenuItem popupItem(String text, {VoidCallback? onTap}) {
@@ -502,7 +503,7 @@ class _RequestWidgetState extends State<RequestWidget> {
   Future<void> requestEdit() async {
     var size = MediaQuery.of(context).size;
     var ratio = 1.0;
-    if (Platform.isWindows) {
+    if (Platforms.isWindows()) {
       ratio = WindowManager.instance.getDevicePixelRatio();
     }
 

@@ -10,6 +10,7 @@ import 'package:proxypin/ui/app_update/remote_version_entity.dart';
 import 'package:proxypin/ui/app_update/windows_zip_updater.dart';
 import 'package:proxypin/utils/desktop_tray.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:proxypin/utils/platform.dart';
 
 enum DesktopUpdatePhase {
   idle,
@@ -84,7 +85,7 @@ class DesktopUpdateService {
   static String _t(String zh, String en) => Platform.localeName.startsWith('zh') ? zh : en;
 
   static bool _isInPlaceZip(ReleaseAsset asset) {
-    return asset.installerType == 'zip' && (Platform.isMacOS || Platform.isWindows);
+    return asset.installerType == 'zip' && (Platforms.isMacOS() || Platforms.isWindows());
   }
 
   Future<void> start(RemoteVersionEntity version, ReleaseAsset asset) async {
@@ -253,7 +254,7 @@ class DesktopUpdateService {
 
     try {
       if (_isInPlaceZip(asset)) {
-        final started = Platform.isMacOS
+        final started = Platforms.isMacOS()
             ? await MacosZipUpdater.install(version.version, File(filePath))
             : await WindowsZipUpdater.install(version.version, File(filePath));
         if (!started) {
@@ -275,9 +276,9 @@ class DesktopUpdateService {
   }
 
   Future<void> _openInstaller(String filePath) async {
-    if (Platform.isMacOS) {
+    if (Platforms.isMacOS()) {
       await Process.start('open', [filePath]);
-    } else if (Platform.isWindows) {
+    } else if (Platforms.isWindows()) {
       await Process.start(filePath, [], mode: ProcessStartMode.detached);
     } else {
       throw DesktopUpdateException(_t('当前平台不支持自动安装', 'Auto-install not supported on this platform'));

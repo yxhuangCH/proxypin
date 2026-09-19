@@ -85,8 +85,8 @@ class Configuration {
   Configuration.fromJson(Map<String, dynamic> config) {
     port = config['port'] ?? port;
     enableSsl = config['enableSsl'] == true;
-    startup = config['startup'] ?? Platforms.isDesktop();
-    enableSystemProxy = config['enableSystemProxy'] ?? (config['enableDesktop'] ?? true);
+    startup = config['startup'] ?? (Platforms.isDesktop() || Platforms.isOhos());
+    enableSystemProxy = config['enableSystemProxy'] ?? (config['enableDesktop'] ?? !Platforms.isOhos());
     enableSocks5 = config['enableSocks5'] ?? true;
     enabledHttp2 = config['enabledHttp2'] ?? false;
 

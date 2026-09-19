@@ -22,17 +22,19 @@ import 'dart:io';
 import 'package:code_forge/code_forge.dart';
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:re_highlight/styles/atom-one-dark.dart';
 import 'package:re_highlight/styles/atom-one-light.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/ui/component/search/finder.dart';
 import 'package:proxypin/utils/css_formatter.dart';
 import 'package:proxypin/utils/lang.dart';
 import 'package:proxypin/utils/platform.dart';
+import 'package:proxypin/utils/share.dart';
 import 'package:re_highlight/languages/bash.dart';
 import 'package:re_highlight/languages/css.dart';
 import 'package:re_highlight/languages/dart.dart';
@@ -184,10 +186,10 @@ class _TextEditorPageState extends State<TextEditorPage> {
   Future<void> _openFile() async {
     String? path;
     try {
-      final result = await FilePicker.pickFiles(type: FileType.any);
+      final result = await FilePickerUtil.pickFiles(type: FileType.any);
       path = result?.files.single.path;
     } catch (_) {
-      final result = await FilePicker.pickFiles();
+      final result = await FilePickerUtil.pickFiles();
       path = result?.files.single.path;
     }
 
@@ -247,26 +249,26 @@ class _TextEditorPageState extends State<TextEditorPage> {
       if (await Platforms.isIpad() && mounted) {
         box = context.findRenderObject() as RenderBox?;
       }
-      await SharePlus.instance.share(
+      await ShareUtil.share(
           ShareParams(files: [file], fileNameOverrides: const ['text.txt'], sharePositionOrigin: box?.paintBounds));
       return;
     }
 
-    String? path = await FilePicker.saveFile(fileName: 'text.txt', bytes: utf8.encode(text));
+    String? path = await FilePickerUtil.saveFile(fileName: 'text.txt', bytes: utf8.encode(text));
     if (path == null) return;
     if (mounted) _toast(localizations.saveSuccess);
   }
 
   void _toast(String msg) {
     if (!mounted) return;
-    FlutterToastr.show(msg, context, duration: 3);
+    Toast.show(msg, context, duration: 3);
   }
 
   // ---------- UI ----------
 
   @override
   Widget build(BuildContext context) {
-    bool isNewWindows = widget.windowId != null && Platform.isWindows;
+    bool isNewWindows = widget.windowId != null && Platforms.isWindows();
 
     return Scaffold(
       appBar: isNewWindows

@@ -21,7 +21,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/native/app_lifecycle.dart';
 import 'package:proxypin/native/pip.dart';
 import 'package:proxypin/native/vpn.dart';
@@ -53,6 +53,7 @@ import 'package:proxypin/utils/ip.dart';
 import 'package:proxypin/utils/lang.dart';
 import 'package:proxypin/utils/listenable_list.dart';
 import 'package:proxypin/utils/navigator.dart';
+import 'package:proxypin/utils/platform.dart';
 
 import '../app_update/app_update_repository.dart';
 import 'package:proxypin/ui/component/multi_window.dart';
@@ -126,14 +127,17 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
     AppLifecycleBinding.instance.addListener(this);
     proxyServer = ProxyServer(widget.configuration);
     proxyServer.addListener(this);
-    proxyServer.start();
+    //VPN 模式（Android/iOS）下代理服务常驻；鸿蒙等纯代理模式由启动开关控制
+    if (Platforms.supportVpn()) {
+      proxyServer.start();
+    }
     _remoteHistorySubscription = HistoryStorage.onRemoteImported.listen((item) => _openHistoryPage(item));
 
     if (widget.appConfiguration.upgradeNoticeV30) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showUpgradeNotice();
       });
-    } else if (Platform.isAndroid) {
+    } else if (Platforms.isAndroid()) {
       AppUpdateRepository.checkUpdate(context);
     }
 
@@ -231,8 +235,8 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
           if (DateTime.now().millisecondsSinceEpoch - exitTime > 1500) {
             exitTime = DateTime.now().millisecondsSinceEpoch;
             if (mounted) {
-              FlutterToastr.show(localizations.appExitTips, this.context,
-                  rootNavigator: true, duration: FlutterToastr.lengthLong);
+              Toast.show(localizations.appExitTips, this.context,
+                  rootNavigator: true, duration: Toast.lengthLong);
             }
             return;
           }
@@ -290,8 +294,11 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
   }
 
   Future<bool> enterPictureInPicture() async {
+    if (!Platforms.supportVpn()) {
+      return false;
+    }
     if (Vpn.isVpnStarted) {
-      if (!Platform.isAndroid || !(await (AppConfiguration.instance)).pipEnabled.value) {
+      if (!Platforms.isAndroid() || !(await (AppConfiguration.instance)).pipEnabled.value) {
         return false;
       }
 
@@ -303,7 +310,7 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
       }
 
       return PictureInPicture.enterPictureInPictureMode(
-          Platform.isAndroid ? await localIp() : "127.0.0.1", proxyServer.port,
+          Platforms.isAndroid() ? await localIp() : "127.0.0.1", proxyServer.port,
           appList: appList, disallowApps: disallowApps);
     }
     return false;
@@ -325,10 +332,12 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
 
     if (!isInPictureInPictureMode) {
       Navigator.maybePop(context);
-      Vpn.isRunning().then((value) {
-        Vpn.isVpnStarted = value;
-        SocketLaunch.startStatus.value = ValueWrap.of(value);
-      });
+      if (Platforms.supportVpn()) {
+        Vpn.isRunning().then((value) {
+          Vpn.isVpnStarted = value;
+          SocketLaunch.startStatus.value = ValueWrap.of(value);
+        });
+      }
     }
   }
 
@@ -449,6 +458,9 @@ class RequestPageState extends State<RequestPage> {
 
   Widget _launchActionButton() {
     var theme = Theme.of(context);
+    //VPN 模式（Android/iOS）：开关控制 VPN，代理服务常驻；
+    //纯代理模式（鸿蒙等）：开关直接控制代理服务启停
+    final bool vpnLaunch = Platforms.supportVpn();
     return Theme(
         data: ThemeData.from(colorScheme: theme.colorScheme, textTheme: theme.textTheme, useMaterial3: true),
         child: FloatingActionButton(
@@ -458,22 +470,24 @@ class RequestPageState extends State<RequestPage> {
               proxyServer: proxyServer,
               size: 36,
               startup: proxyServer.configuration.startup,
-              serverLaunch: false,
-              onStart: () async {
-                String host = Platform.isAndroid ? await localIp(readCache: false) : "127.0.0.1";
-                int port = proxyServer.port;
-                if (Platform.isIOS) {
-                  await proxyServer.retryBind();
-                }
+              serverLaunch: !vpnLaunch,
+              onStart: !vpnLaunch
+                  ? null
+                  : () async {
+                      String host = Platforms.isAndroid() ? await localIp(readCache: false) : "127.0.0.1";
+                      int port = proxyServer.port;
+                      if (Platforms.isIOS()) {
+                        await proxyServer.retryBind();
+                      }
 
-                if (remoteDevice.value.ipProxy == true) {
-                  host = remoteDevice.value.host!;
-                  port = remoteDevice.value.port!;
-                }
+                      if (remoteDevice.value.ipProxy == true) {
+                        host = remoteDevice.value.host!;
+                        port = remoteDevice.value.port!;
+                      }
 
-                Vpn.startVpn(host, port, proxyServer.configuration, ipProxy: remoteDevice.value.ipProxy);
-              },
-              onStop: () => Vpn.stopVpn()),
+                      Vpn.startVpn(host, port, proxyServer.configuration, ipProxy: remoteDevice.value.ipProxy);
+                    },
+              onStop: !vpnLaunch ? null : () => Vpn.stopVpn()),
         ));
   }
 
@@ -562,7 +576,7 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
         leading: bottomNavigation ? const SizedBox() : null,
-        systemOverlayStyle: Platform.isAndroid
+        systemOverlayStyle: Platforms.isAndroid()
             ? SystemUiOverlayStyle(
                 systemNavigationBarColor: ColorScheme.of(context).surface,
                 statusBarColor: ColorScheme.of(context).surface)

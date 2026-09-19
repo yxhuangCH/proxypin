@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'package:proxypin/network/util/cert/cert_data.dart';
 import 'package:proxypin/network/util/logger.dart';
+import 'package:proxypin/utils/platform.dart';
 
 class CertInstaller {
   static Future<bool> installCertificate(File certFile) async {
     try {
-      if (Platform.isMacOS) {
+      if (Platforms.isMacOS()) {
         // 使用 security add-trusted-cert 安装证书到登录钥匙串并设为信任根
         final result = await Process.run('security', [
           'add-trusted-cert',
@@ -19,7 +20,7 @@ class CertInstaller {
         return result.exitCode == 0;
       }
 
-      if (Platform.isWindows) {
+      if (Platforms.isWindows()) {
         // Windows: 使用 certutil 命令行安装证书到根证书存储区
         final result = await Process.run('certutil', [
           '-addstore',
@@ -31,7 +32,7 @@ class CertInstaller {
         return result.exitCode == 0;
       }
 
-      if (Platform.isLinux) {
+      if (Platforms.isLinux()) {
         // Linux: 拷贝到 /usr/local/share/ca-certificates/ 并更新证书
         final certName = certFile.uri.pathSegments.last.endsWith('.crt')
             ? certFile.uri.pathSegments.last
@@ -57,14 +58,14 @@ class CertInstaller {
     String? sha1 = caCert.sha1Thumbprint;
     logger.d('Checking if certificate is installed: CN=$commonName, SHA1=$sha1');
     try {
-      if (Platform.isWindows) {
+      if (Platforms.isWindows()) {
         List<String> args = ['-user', '-store', 'root'];
         if (sha1 != null) {
           args.add(sha1);
         }
         var res = await Process.run('certutil', args);
         return res.stdout.toString().toLowerCase().contains(commonName.toLowerCase());
-      } else if (Platform.isMacOS) {
+      } else if (Platforms.isMacOS()) {
         var res = await Process.run('security', ['find-certificate', '-c', commonName]);
 
         if ((res.stdout as String).isNotEmpty) {
@@ -75,7 +76,7 @@ class CertInstaller {
           return (trustRes.stdout as String).contains('certificate verification successful');
         }
         return false;
-      } else if (Platform.isLinux) {
+      } else if (Platforms.isLinux()) {
         // 只检查 /usr/local/share/ca-certificates/ 下是否有对应证书文件
         final certName = filePath.uri.pathSegments.last.endsWith('.crt')
             ? filePath.uri.pathSegments.last

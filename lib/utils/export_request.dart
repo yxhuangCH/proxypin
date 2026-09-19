@@ -3,8 +3,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/http/http.dart';
 import 'package:proxypin/network/util/logger.dart';
@@ -12,6 +13,7 @@ import 'package:proxypin/ui/component/utils.dart';
 import 'package:proxypin/ui/configuration.dart';
 import 'package:proxypin/utils/har.dart';
 import 'package:proxypin/utils/platform.dart';
+import 'package:proxypin/utils/share.dart';
 import 'package:share_plus/share_plus.dart';
 
 enum ExportType {
@@ -25,14 +27,14 @@ void exportRequest(HttpRequest request) async {
   String fileName = "request_${request.hostAndPort?.host}_${request.requestId}.txt";
   var json = copyRawRequest(request);
 
-  var path = await FilePicker.saveFile(fileName: fileName, bytes: utf8.encode(json));
+  var path = await FilePickerUtil.saveFile(fileName: fileName, bytes: utf8.encode(json));
   logger.d("Export request to $path");
 }
 
 void exportRequestBody(HttpRequest request) async {
   String fileName = "request_body_${request.hostAndPort?.host}_${request.requestId}.txt";
 
-  var path = await FilePicker.saveFile(
+  var path = await FilePickerUtil.saveFile(
       fileName: fileName, bytes: request.body == null ? Uint8List(0) : Uint8List.fromList(request.body!));
   logger.d("Export request body to $path");
 }
@@ -45,7 +47,7 @@ void exportResponse(HttpResponse? response) async {
 
   String fileName = "response_${response.request?.hostAndPort?.host}_${response.requestId}.txt";
   var json = await copyRawResponse(response);
-  var path = await FilePicker.saveFile(fileName: fileName, bytes: utf8.encode(json));
+  var path = await FilePickerUtil.saveFile(fileName: fileName, bytes: utf8.encode(json));
   logger.d("Export response to $path");
 }
 
@@ -56,7 +58,7 @@ void exportResponseBody(HttpResponse? response) async {
 
   String fileName = "response_body_${response.request?.hostAndPort?.host}_${response.requestId}.txt";
 
-  var path = await FilePicker.saveFile(
+  var path = await FilePickerUtil.saveFile(
       fileName: fileName, bytes: response.body == null ? Uint8List(0) : Uint8List.fromList(response.body!));
   logger.d("Export response body to $path");
 }
@@ -65,7 +67,7 @@ void exportRequestAndResponse(HttpRequest request, HttpResponse? response) async
   String fileName = "request_response_${request.hostAndPort?.host ?? ''}_${request.requestId}.txt";
 
   var json = copyRequest(request, response);
-  var path = await FilePicker.saveFile(fileName: fileName, bytes: utf8.encode(json));
+  var path = await FilePickerUtil.saveFile(fileName: fileName, bytes: utf8.encode(json));
   logger.d("Export request and response to $path");
 }
 
@@ -91,7 +93,7 @@ void exportHar(HttpRequest request) async {
   };
   var json = jsonEncode(har);
 
-  var path = await FilePicker.saveFile(fileName: fileName, bytes: utf8.encode(json));
+  var path = await FilePickerUtil.saveFile(fileName: fileName, bytes: utf8.encode(json));
   logger.d("Export har to $path");
 }
 
@@ -160,11 +162,11 @@ Future<void> exportRequestsAsFiles(
     int successCount = 0;
 
     final isDesktop = Platforms.isDesktop();
-    if (isDesktop || Platform.isAndroid) {
+    if (isDesktop || Platforms.isAndroid()) {
       String? selectedDirectory;
 
       if (isDesktop) {
-        selectedDirectory = await FilePicker.saveFile(
+        selectedDirectory = await FilePickerUtil.saveFile(
                 fileName: folderName, type: FileType.custom, allowedExtensions: [''], bytes: Uint8List(0))
             .then((path) => path != null ? "${Directory(path).parent.path}/$folderName" : null);
       } else {
@@ -228,7 +230,7 @@ Future<void> exportRequestsAsFiles(
       if (await Platforms.isIpad() && context.mounted) {
         box = context.findRenderObject() as RenderBox?;
       }
-      await SharePlus.instance.share(ShareParams(
+      await ShareUtil.share(ShareParams(
           fileNameOverrides: files.map((f) => f.name).toList(),
           files: files,
           sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size));
@@ -237,7 +239,7 @@ Future<void> exportRequestsAsFiles(
     onSuccess?.call(successCount);
   } catch (e, st) {
     logger.e('Export error: ', error: e, stackTrace: st);
-    if (context.mounted) FlutterToastr.show('${AppLocalizations.of(context)?.exportFailed}: $e', context);
+    if (context.mounted) Toast.show('${AppLocalizations.of(context)?.exportFailed}: $e', context);
   }
 }
 
@@ -253,8 +255,8 @@ Future<void> exportHarFile(
     var json = await Har.writeJson(requests, title: fileName);
     var bytes = utf8.encode(json);
 
-    if (Platforms.isDesktop() || Platform.isAndroid) {
-      await FilePicker.saveFile(fileName: fileName, bytes: bytes);
+    if (Platforms.isDesktop() || Platforms.isAndroid()) {
+      await FilePickerUtil.saveFile(fileName: fileName, bytes: bytes);
     } else {
       RenderBox? box;
       if (await Platforms.isIpad() && context.mounted) {
@@ -262,7 +264,7 @@ Future<void> exportHarFile(
       }
 
       logger.d("Export HAR file: $fileName, size: ${bytes.length} bytes");
-      await SharePlus.instance.share(ShareParams(
+      await ShareUtil.share(ShareParams(
           sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
           fileNameOverrides: [fileName],
           files: [XFile.fromData(bytes, name: fileName, mimeType: "application/json")]));
@@ -308,7 +310,7 @@ void showExportDialog(
                   onSuccess: (count) {
                     onExportSuccess?.call();
                     if (ctx.mounted) {
-                      FlutterToastr.show('${localizations.exportSuccess}: $count ${localizations.request}', ctx);
+                      Toast.show('${localizations.exportSuccess}: $count ${localizations.request}', ctx);
                     }
                   },
                 );
@@ -326,7 +328,7 @@ void showExportDialog(
                   onSuccess: (count) {
                     onExportSuccess?.call();
                     if (ctx.mounted) {
-                      FlutterToastr.show('${localizations.exportSuccess}: $count ${localizations.request}', ctx);
+                      Toast.show('${localizations.exportSuccess}: $count ${localizations.request}', ctx);
                     }
                   },
                 );
@@ -344,7 +346,7 @@ void showExportDialog(
                   onSuccess: (count) {
                     onExportSuccess?.call();
                     if (ctx.mounted) {
-                      FlutterToastr.show('${localizations.exportSuccess}: $count ${localizations.request}', ctx);
+                      Toast.show('${localizations.exportSuccess}: $count ${localizations.request}', ctx);
                     }
                   },
                 );
@@ -362,7 +364,7 @@ void showExportDialog(
                   onSuccess: () {
                     onExportSuccess?.call();
                     if (ctx.mounted) {
-                      FlutterToastr.show(localizations.exportSuccess, ctx);
+                      Toast.show(localizations.exportSuccess, ctx);
                     }
                   },
                 );

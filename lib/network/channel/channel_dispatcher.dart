@@ -18,6 +18,7 @@ import 'package:proxypin/network/util/process_info.dart';
 import 'package:proxypin/network/handle/sse_handle.dart';
 
 import '../util/task_queue.dart';
+import 'package:proxypin/utils/platform.dart';
 
 class ChannelDispatcher extends ChannelHandler<Uint8List> {
   late Decoder decoder;
@@ -215,7 +216,7 @@ class ChannelDispatcher extends ChannelHandler<Uint8List> {
   /// SSL / HTTP2 走 SNI 嗅探或 `:authority`，已经拿到正确端口；
   /// 其它明文情况（绝对 URI / Host 头自带端口）[getHostAndPort] 也能处理。
   Future<void> _fixAndroidVpnPort(ChannelContext channelContext, Channel channel, HttpRequest data) async {
-    if (!Platform.isAndroid ||
+    if (!Platforms.isAndroid() ||
         channel.isSsl ||
         !data.uri.startsWith("/") ||
         data.headers.host?.contains(":") == true ||

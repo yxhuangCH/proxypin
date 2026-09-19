@@ -15,6 +15,7 @@
  */
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -169,7 +170,7 @@ class MapLocaleState extends State<DesktopMapLocal> {
           const SizedBox(width: 10),
           FilledButton(
               onPressed: () async {
-                FilePickerResult? result = await FilePicker.pickFiles();
+                FilePickerResult? result = await FilePickerUtil.pickFiles();
                 final path = result?.files.single.path;
 
                 if (path == null) {

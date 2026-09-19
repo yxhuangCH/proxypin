@@ -207,13 +207,13 @@ class MultiWindow {
 
   static Future<WindowController> openWindow(String title, String widgetName,
       {Size size = const Size(800, 680), Map<String, dynamic>? args}) async {
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (Platforms.isMobile()) {
       onOpenWindow?.call(widgetName, args);
       return WindowController.fromWindowId('0'); // Dummy controller
     }
 
     var ratio = 1.0;
-    if (Platform.isWindows) {
+    if (Platforms.isWindows()) {
       ratio = WindowManager.instance.getDevicePixelRatio();
     }
     registerMethodHandler();
@@ -221,7 +221,7 @@ class MultiWindow {
       {'name': widgetName, ...?args},
     ));
 
-    if (!Platform.isMacOS) {
+    if (!Platforms.isMacOS()) {
       window.setTitle(title);
     }
     await window.center();
@@ -352,7 +352,7 @@ Future<void> encodeWindow(EncoderType type, BuildContext context, [String? text]
   }
 
   var ratio = 1.0;
-  if (Platform.isWindows) {
+  if (Platforms.isWindows()) {
     ratio = WindowManager.instance.getDevicePixelRatio();
   }
   final window = await DesktopMultiWindow.createWindow(jsonEncode(
@@ -367,7 +367,7 @@ Future<void> encodeWindow(EncoderType type, BuildContext context, [String? text]
 
 Future<void> openScriptConsoleWindow() async {
   var ratio = 1.0;
-  if (Platform.isWindows) {
+  if (Platforms.isWindows()) {
     ratio = WindowManager.instance.getDevicePixelRatio();
   }
   final window = await DesktopMultiWindow.createWindow(jsonEncode(

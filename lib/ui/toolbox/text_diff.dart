@@ -19,11 +19,12 @@ import 'dart:io';
 import 'package:code_forge/code_forge.dart';
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:re_highlight/styles/atom-one-dark.dart';
 import 'package:re_highlight/styles/atom-one-light.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/ui/component/search/finder.dart';
 import 'package:proxypin/utils/platform.dart';
@@ -305,10 +306,10 @@ class _TextDiffPageState extends State<TextDiffPage> {
   Future<void> _openFileInto(CodeForgeController target) async {
     String? path;
     try {
-      final result = await FilePicker.pickFiles(type: FileType.any);
+      final result = await FilePickerUtil.pickFiles(type: FileType.any);
       path = result?.files.single.path;
     } catch (_) {
-      final result = await FilePicker.pickFiles();
+      final result = await FilePickerUtil.pickFiles();
       path = result?.files.single.path;
     }
 
@@ -323,14 +324,14 @@ class _TextDiffPageState extends State<TextDiffPage> {
 
   void _toast(String msg) {
     if (!mounted) return;
-    FlutterToastr.show(msg, context, duration: 3);
+    Toast.show(msg, context, duration: 3);
   }
 
   // ---------- UI ----------
 
   @override
   Widget build(BuildContext context) {
-    bool isNewWindows = widget.windowId != null && Platform.isWindows;
+    bool isNewWindows = widget.windowId != null && Platforms.isWindows();
 
     return Scaffold(
       appBar: isNewWindows

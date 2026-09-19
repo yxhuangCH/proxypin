@@ -18,10 +18,11 @@ import 'dart:io';
 
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/util/cert/x509.dart';
 import 'package:proxypin/ui/component/buttons.dart';
 import 'package:proxypin/ui/component/text_field.dart';
@@ -83,7 +84,7 @@ class _CertHashPageState extends State<CertHashPage> {
           Wrap(alignment: WrapAlignment.end, children: [
             ElevatedButton.icon(
                 onPressed: () async {
-                  FilePickerResult? result = await FilePicker.pickFiles(
+                  FilePickerResult? result = await FilePickerUtil.pickFiles(
                       type: FileType.custom, allowedExtensions: ['crt', 'pem', 'cer', 'der']);
                   if (result == null) return;
 
@@ -147,7 +148,7 @@ class _CertHashPageState extends State<CertHashPage> {
       var subjectHashName = X509Utils.getSubjectHashName(subject);
       decodeData.text = '$subjectHashName.0';
     } catch (e) {
-      FlutterToastr.show(localizations.decodeFail, context, duration: 3, backgroundColor: Colors.red);
+      Toast.show(localizations.decodeFail, context, duration: 3, backgroundColor: Colors.red);
     }
   }
 

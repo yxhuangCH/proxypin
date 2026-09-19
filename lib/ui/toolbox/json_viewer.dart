@@ -20,11 +20,12 @@ import 'dart:io';
 import 'package:code_forge/code_forge.dart';
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:re_highlight/styles/atom-one-dark.dart';
 import 'package:re_highlight/styles/atom-one-light.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/http/content_type.dart';
 import 'package:proxypin/network/util/logger.dart';
@@ -33,6 +34,7 @@ import 'package:proxypin/ui/component/json/theme.dart';
 import 'package:proxypin/ui/component/search/finder.dart';
 import 'package:proxypin/utils/highlight_languages.dart';
 import 'package:proxypin/utils/platform.dart';
+import 'package:proxypin/utils/share.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// JSON 查看 / 格式化工具
@@ -170,11 +172,11 @@ class _JsonViewerPageState extends State<JsonViewerPage> with SingleTickerProvid
   Future<void> _openFile() async {
     String? path;
     try {
-      final result = await FilePicker.pickFiles(type: FileType.any);
+      final result = await FilePickerUtil.pickFiles(type: FileType.any);
       path = result?.files.single.path;
     } catch (_) {
       // 某些平台 (e.g. Linux) custom + extensions 可能抛错，回退到任意类型
-      final result = await FilePicker.pickFiles();
+      final result = await FilePickerUtil.pickFiles();
       path = result?.files.single.path;
     }
 
@@ -198,19 +200,19 @@ class _JsonViewerPageState extends State<JsonViewerPage> with SingleTickerProvid
       if (await Platforms.isIpad() && mounted) {
         box = context.findRenderObject() as RenderBox?;
       }
-      await SharePlus.instance.share(
+      await ShareUtil.share(
           ShareParams(files: [file], fileNameOverrides: const ['data.json'], sharePositionOrigin: box?.paintBounds));
       return;
     }
 
-    String? path = await FilePicker.saveFile(fileName: 'data.json', bytes: utf8.encode(text));
+    String? path = await FilePickerUtil.saveFile(fileName: 'data.json', bytes: utf8.encode(text));
     if (path == null) return;
     if (mounted) _toast(localizations.saveSuccess);
   }
 
   void _toast(String msg) {
     if (!mounted) return;
-    FlutterToastr.show(msg, context, duration: 3);
+    Toast.show(msg, context, duration: 3);
   }
 
   // ---------- UI ----------
@@ -246,7 +248,7 @@ class _JsonViewerPageState extends State<JsonViewerPage> with SingleTickerProvid
       ),
     ]);
 
-    if (widget.windowId != null && Platform.isWindows) {
+    if (widget.windowId != null && Platforms.isWindows()) {
       return Scaffold(
         body: body,
       );

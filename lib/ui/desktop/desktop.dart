@@ -42,6 +42,7 @@ import 'package:proxypin/utils/listenable_list.dart';
 import '../app_update/app_update_repository.dart';
 import '../component/split_view.dart';
 import '../toolbox/toolbox.dart';
+import 'package:proxypin/utils/platform.dart';
 
 /// @author wanghongen
 /// 2023/10/8
@@ -140,8 +141,8 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
               border: Border(
                   bottom: BorderSide(
                       color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                      width: Platform.isMacOS ? 0.2 : 0.55))),
-          child: Platform.isMacOS
+                      width: Platforms.isMacOS() ? 0.2 : 0.55))),
+          child: Platforms.isMacOS()
               ? Toolbar(proxyServer, requestListStateKey)
               : WindowsToolbar(title: Toolbar(proxyServer, requestListStateKey)),
         )),

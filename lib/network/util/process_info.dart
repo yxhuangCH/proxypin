@@ -21,6 +21,7 @@ import 'package:proxypin/native/installed_apps.dart';
 import 'package:proxypin/native/process_info.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/network/util/socket_address.dart';
+import 'package:proxypin/utils/platform.dart';
 import 'package:win32audio/win32audio.dart';
 
 import 'cache.dart';
@@ -53,7 +54,12 @@ class ProcessInfoUtils {
 
   static Future<ProcessInfo?> getProcessByPort(InetSocketAddress socketAddress, String cacheKeyPre) async {
     try {
-      if (Platform.isAndroid) {
+      //不支持进程信息查询的平台（iOS、鸿蒙）直接降级返回 null
+      if (!Platforms.supportProcessInfo()) {
+        return null;
+      }
+
+      if (Platforms.isAndroid()) {
         var app = await ProcessInfoPlugin.getProcessByPort(socketAddress.host, socketAddress.port);
         if (app != null) {
           return app;
@@ -93,7 +99,7 @@ class ProcessInfoUtils {
 
   // 获取进程 ID
   static Future<int?> _getPid(InetSocketAddress socketAddress) async {
-    if (Platform.isWindows) {
+    if (Platforms.isWindows()) {
       var result = await Process.run('cmd', ['/c', 'netstat -ano | findstr :${socketAddress.port}']);
       var lines = LineSplitter.split(result.stdout);
       for (var line in lines) {
@@ -108,7 +114,7 @@ class ProcessInfoUtils {
       return null;
     }
 
-    if (Platform.isMacOS) {
+    if (Platforms.isMacOS()) {
       // Use libproc syscalls (FFI) instead of spawning `lsof`. Each
       // Process.run on macOS goes through fork()+execvp(); under load a
       // multi-threaded Dart VM occasionally deadlocks the forked child
@@ -120,7 +126,7 @@ class ProcessInfoUtils {
   }
 
   static Future<ProcessInfo?> getProcess(int pid) async {
-    if (Platform.isWindows) {
+    if (Platforms.isWindows()) {
       // 获取应用路径
       var result = await Process.run('cmd', ['/c', 'wmic process where processid=$pid get ExecutablePath']);
       var output = result.stdout.toString();
@@ -129,7 +135,7 @@ class ProcessInfoUtils {
       return ProcessInfo(name, name.split(".")[0], path, os: Platform.operatingSystem);
     }
 
-    if (Platform.isMacOS) {
+    if (Platforms.isMacOS()) {
       // Use libproc syscalls (FFI) instead of spawning `ps`. See issue #763.
       final fullPath = MacosProcessInfo.getProcessPath(pid);
       if (fullPath == null) return null;
@@ -182,15 +188,15 @@ class ProcessInfo {
     if (icon != null) return icon!;
     if (_iconCache.get(id) != null) return _iconCache.get(id)!;
     try {
-      if (Platform.isAndroid) {
+      if (Platforms.isAndroid()) {
         icon = (await InstalledApps.getAppInfo(id)).icon;
       }
 
-      if ('windows' == os || path.endsWith('.exe')) {
+      if (Platforms.isWindows() && ('windows' == os || path.endsWith('.exe'))) {
         icon = await _getWindowsIcon(path);
       }
 
-      if (Platform.isMacOS) {
+      if (Platforms.isMacOS()) {
         var macIcon = await _getMacIcon(path);
         icon = await File(macIcon).readAsBytes();
       }

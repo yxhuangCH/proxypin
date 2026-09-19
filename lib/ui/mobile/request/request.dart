@@ -19,7 +19,7 @@ import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/components/manager/request_rewrite_manager.dart';
 import 'package:proxypin/network/components/manager/rewrite_rule.dart';
@@ -44,6 +44,7 @@ import 'package:proxypin/utils/keyword_highlight.dart';
 import 'package:proxypin/utils/lang.dart';
 import 'package:proxypin/utils/navigator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:proxypin/utils/platform.dart';
 
 ///请求行
 class RequestRow extends StatefulWidget {
@@ -163,7 +164,7 @@ class RequestRowState extends State<RequestRow> {
               ])),
           trailing: getIcon(response, color: highlightColor),
           contentPadding:
-              Platform.isIOS ? const EdgeInsets.symmetric(horizontal: 8) : const EdgeInsets.only(left: 3, right: 5),
+              Platforms.isIOS() ? const EdgeInsets.symmetric(horizontal: 8) : const EdgeInsets.only(left: 3, right: 5),
           onTap: () {
             if (widget.selectionController.isSelectionMode) {
               widget.selectionController.toggle(request.requestId);
@@ -205,7 +206,7 @@ class RequestRowState extends State<RequestRow> {
   }
 
   Widget? appIcon() {
-    if (Platform.isIOS) {
+    if (Platforms.isIOS()) {
       return null;
     }
     if (request.processInfo == null) {
@@ -240,7 +241,7 @@ class RequestRowState extends State<RequestRow> {
     var position = RelativeRect.fromLTRB(globalPosition.dx, globalPosition.dy, globalPosition.dx, globalPosition.dy);
     final selectionMode = widget.selectionController.isSelectionMode;
     // Trigger haptic feedback
-    if (Platform.isAndroid) HapticFeedback.mediumImpact();
+    if (Platforms.isAndroid()) HapticFeedback.mediumImpact();
 
     showMenu(
         context: context,
@@ -298,7 +299,7 @@ class RequestRowState extends State<RequestRow> {
                       left: itemButton(
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: request.requestUrl)).then((value) {
-                              FlutterToastr.show(localizations.copied, getContext());
+                              Toast.show(localizations.copied, getContext());
                               Navigator.maybePop(getContext());
                             });
                           },
@@ -308,7 +309,7 @@ class RequestRowState extends State<RequestRow> {
                       right: itemButton(
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: curlRequest(request))).then((value) {
-                              FlutterToastr.show(localizations.copied, getContext());
+                              Toast.show(localizations.copied, getContext());
                               Navigator.maybePop(getContext());
                             });
                           },
@@ -334,7 +335,7 @@ class RequestRowState extends State<RequestRow> {
                       left: itemButton(
                           onPressed: () {
                             FavoriteStorage.addFavorite(widget.request);
-                            FlutterToastr.show(localizations.addSuccess, availableContext);
+                            Toast.show(localizations.addSuccess, availableContext);
                             Navigator.maybePop(availableContext);
                           },
                           label: localizations.favorite,
@@ -423,7 +424,7 @@ class RequestRowState extends State<RequestRow> {
                       right: itemButton(
                           onPressed: () {
                             widget.onRemove?.call(request);
-                            FlutterToastr.show(localizations.deleteSuccess, availableContext);
+                            Toast.show(localizations.deleteSuccess, availableContext);
                             Navigator.maybePop(availableContext);
                           },
                           label: localizations.delete,
@@ -453,7 +454,7 @@ class RequestRowState extends State<RequestRow> {
     HttpClients.proxyRequest(httpRequest, proxyInfo: proxyInfo);
 
     if (mounted) {
-      FlutterToastr.show(localizations.reSendRequest, context);
+      Toast.show(localizations.reSendRequest, context);
     }
   }
 

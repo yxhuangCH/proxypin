@@ -19,7 +19,7 @@ import 'dart:collection';
 import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/bin/configuration.dart';
 import 'package:proxypin/network/bin/server.dart';
@@ -273,7 +273,7 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
                   text: localizations.copyHost,
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: hostAndPort.host));
-                    FlutterToastr.show(localizations.copied, context);
+                    Toast.show(localizations.copied, context);
                   }),
               const Divider(thickness: 0.5, height: 5),
               BottomSheetItem(
@@ -281,7 +281,7 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
                   onPressed: () {
                     HostFilter.blacklist.add(hostAndPort.host);
                     configuration.flushConfig();
-                    FlutterToastr.show(localizations.addSuccess, context);
+                    Toast.show(localizations.addSuccess, context);
                   }),
               const Divider(thickness: 0.5, height: 5),
               BottomSheetItem(
@@ -289,7 +289,7 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
                   onPressed: () {
                     HostFilter.whitelist.add(hostAndPort.host);
                     configuration.flushConfig();
-                    FlutterToastr.show(localizations.addSuccess, context);
+                    Toast.show(localizations.addSuccess, context);
                   }),
               const Divider(thickness: 0.5, height: 5),
               BottomSheetItem(
@@ -297,7 +297,7 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
                   onPressed: () {
                     HostFilter.whitelist.remove(hostAndPort.host);
                     configuration.flushConfig();
-                    FlutterToastr.show(localizations.deleteSuccess, context);
+                    Toast.show(localizations.deleteSuccess, context);
                   }),
               const Divider(thickness: 0.5, height: 5),
               BottomSheetItem(
@@ -322,7 +322,7 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
                       if (requests != null) {
                         widget.onRemove?.call(requests);
                       }
-                      FlutterToastr.show(localizations.deleteSuccess, context);
+                      Toast.show(localizations.deleteSuccess, context);
                     });
                   }),
               Container(
@@ -354,9 +354,9 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
       var proxyInfo = widget.proxyServer.isRunning ? ProxyInfo.of("127.0.0.1", widget.proxyServer.port) : null;
       try {
         await HttpClients.proxyRequest(request, proxyInfo: proxyInfo);
-        if (mounted) FlutterToastr.show(localizations.reSendRequest, rootNavigator: true, context);
+        if (mounted) Toast.show(localizations.reSendRequest, rootNavigator: true, context);
       } catch (e) {
-        if (mounted) FlutterToastr.show('${localizations.fail}$e', rootNavigator: true, context);
+        if (mounted) Toast.show('${localizations.fail}$e', rootNavigator: true, context);
       }
     }
   }
@@ -364,7 +364,7 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
   Future<void> exportDomainHar(HostAndPort hostAndPort) async {
     var requests = containerMap[hostAndPort] ?? [];
     if (requests.isEmpty) {
-      if (mounted) FlutterToastr.show(localizations.emptyData, context);
+      if (mounted) Toast.show(localizations.emptyData, context);
       return;
     }
 

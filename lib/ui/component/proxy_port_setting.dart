@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/bin/server.dart';
 
@@ -33,7 +33,7 @@ class _PortState extends State<PortWidget> {
         final port = int.tryParse(textController.text) ?? -1;
         if (port < 0 || port > 65535) {
           textController.text = widget.proxyServer.port.toString();
-          FlutterToastr.show("Port out of range 0-65535", context, duration: 3);
+          Toast.show("Port out of range 0-65535", context, duration: 3);
           return;
         }
 
@@ -41,7 +41,7 @@ class _PortState extends State<PortWidget> {
 
         if (widget.proxyServer.isRunning) {
           String message = localizations.proxyPortRepeat(widget.proxyServer.port);
-          widget.proxyServer.restart().catchError((e) => FlutterToastr.show(message, context, duration: 3));
+          widget.proxyServer.restart().catchError((e) => Toast.show(message, context, duration: 3));
         }
         widget.proxyServer.configuration.flushConfig();
       }

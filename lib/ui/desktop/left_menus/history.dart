@@ -19,9 +19,10 @@ import 'dart:math';
 
 import 'package:date_format/date_format.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/channel/host_port.dart';
 import 'package:proxypin/network/http/http.dart';
@@ -193,7 +194,7 @@ class _HistoryListState extends State<_HistoryListWidget> {
 
   //导入har
   Future<void> import() async {
-    final results = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['har']);
+    final results = await FilePickerUtil.pickFiles(type: FileType.custom, allowedExtensions: ['har']);
     if (results == null || results.files.isEmpty) {
       return;
     }
@@ -203,12 +204,12 @@ class _HistoryListState extends State<_HistoryListWidget> {
       var historyItem = await storage.addHarFile(file.xFile);
       setState(() {
         toRequestsView(historyItem);
-        FlutterToastr.show(localizations.importSuccess, context);
+        Toast.show(localizations.importSuccess, context);
       });
     } catch (e, t) {
       logger.e('导入失败 $file', error: e, stackTrace: t);
       if (mounted) {
-        FlutterToastr.show("${localizations.importFailed} $e", context);
+        Toast.show("${localizations.importFailed} $e", context);
       }
     }
   }
@@ -270,7 +271,7 @@ class _HistoryListState extends State<_HistoryListWidget> {
                     widget.historyTask.cancelTask();
                   }
                   storage.removeHistory(index);
-                  FlutterToastr.show(localizations.deleteSuccess, context);
+                  Toast.show(localizations.deleteSuccess, context);
                 }),
           ]).whenComplete(() => setState(() => selectIndex = -1));
         },
@@ -310,7 +311,7 @@ class _HistoryListState extends State<_HistoryListWidget> {
                 child: Text(localizations.save),
                 onPressed: () {
                   if (name.isEmpty) {
-                    FlutterToastr.show(localizations.historyEmptyName, context, position: 2);
+                    Toast.show(localizations.historyEmptyName, context, position: 2);
                     return;
                   }
                   Navigator.maybePop(context);
@@ -340,7 +341,7 @@ class _HistoryListState extends State<_HistoryListWidget> {
     List<HttpRequest> requests = await storage.getRequests(item);
     var file = await File(path).create();
     await Har.writeFile(requests, file, title: item.name);
-    if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+    if (mounted) Toast.show(localizations.exportSuccess, context);
     Future.delayed(const Duration(seconds: 30), () => item.requests = null);
   }
 
@@ -354,11 +355,11 @@ class _HistoryListState extends State<_HistoryListWidget> {
       try {
         await HttpClients.proxyRequest(httpRequest, proxyInfo: proxyInfo, timeout: const Duration(seconds: 3));
         if (mounted) {
-          FlutterToastr.show(localizations!.reSendRequest, rootNavigator: true, context);
+          Toast.show(localizations!.reSendRequest, rootNavigator: true, context);
         }
       } catch (e) {
         if (mounted) {
-          FlutterToastr.show('${localizations!.fail} $e', rootNavigator: true, context);
+          Toast.show('${localizations!.fail} $e', rootNavigator: true, context);
         }
       }
     }

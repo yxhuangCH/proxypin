@@ -65,20 +65,22 @@ class _ToolboxState extends State<Toolbox> {
                       icon: Icons.wifi_tethering,
                       text: 'WebSocket',
                       tooltip: 'WebSocket'),
-                  IconText(
-                    icon: Icons.javascript,
-                    text: 'JavaScript',
-                    tooltip: 'JavaScript',
-                    onTap: () async {
-                      if (Platforms.isMobile()) {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const JavaScript()));
-                        return;
-                      }
+                  // 鸿蒙 MVP 不支持脚本（flutter_js 无 ohos 原生库），隐藏入口
+                  if (Platforms.supportScript())
+                    IconText(
+                      icon: Icons.javascript,
+                      text: 'JavaScript',
+                      tooltip: 'JavaScript',
+                      onTap: () async {
+                        if (Platforms.isMobile()) {
+                          Navigator.of(context).push(MaterialPageRoute(builder: (context) => const JavaScript()));
+                          return;
+                        }
 
-                      var size = MediaQuery.of(context).size;
-                      MultiWindow.openWindow('JavaScript', 'JavaScript', size: Size(960, size.height));
-                    },
-                  ),
+                        var size = MediaQuery.of(context).size;
+                        MultiWindow.openWindow('JavaScript', 'JavaScript', size: Size(960, size.height));
+                      },
+                    ),
                 ],
               ),
               const Divider(thickness: 0.3),

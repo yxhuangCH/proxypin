@@ -1,12 +1,12 @@
-import 'dart:io';
 
 import 'package:code_forge/code_forge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:proxypin/utils/platform.dart';
 
 const EdgeInsetsGeometry _kFindMargin = EdgeInsets.only(right: 10);
 const double _kFindPanelWidth = 360;
-final double _kFindPanelHeight = (Platform.isIOS || Platform.isAndroid) ? 52 : 32;
+final double _kFindPanelHeight = Platforms.isMobile() ? 52 : 32;
 final double _kReplacePanelHeight = _kFindPanelHeight * 2;
 const double _kFindIconSize = 16;
 const double _kFindIconWidth = 26;

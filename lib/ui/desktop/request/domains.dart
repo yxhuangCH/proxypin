@@ -20,7 +20,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/ui/component/context_menu.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/bin/configuration.dart';
 import 'package:proxypin/network/bin/server.dart';
@@ -243,7 +243,7 @@ class DomainWidgetState extends State<DomainList> with AutomaticKeepAliveClientM
     return futureWidget(
         processInfo.getIcon(),
         (data) =>
-            data.isEmpty ? const SizedBox() : Image.memory(data, width: 23, height: Platform.isWindows ? 16 : null));
+            data.isEmpty ? const SizedBox() : Image.memory(data, width: 23, height: Platforms.isWindows() ? 16 : null));
   }
 
   ///移除域名
@@ -309,7 +309,7 @@ class DomainWidgetState extends State<DomainList> with AutomaticKeepAliveClientM
   Future<void> exportDomainHar(String domain) async {
     var requests = containerMap[domain]?.body.map((it) => it.request).toList() ?? [];
     if (requests.isEmpty) {
-      if (mounted) FlutterToastr.show(localizations.emptyData, context);
+      if (mounted) Toast.show(localizations.emptyData, context);
       return;
     }
 
@@ -321,9 +321,9 @@ class DomainWidgetState extends State<DomainList> with AutomaticKeepAliveClientM
       }
       var file = await File(path).create(recursive: true);
       await Har.writeFile(requests, file, title: fileName);
-      if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+      if (mounted) Toast.show(localizations.exportSuccess, context);
     } catch (e) {
-      if (mounted) FlutterToastr.show('${localizations.exportFailed} $e', context);
+      if (mounted) Toast.show('${localizations.exportFailed} $e', context);
     }
   }
 
@@ -577,7 +577,7 @@ class _DomainRequestsState extends State<DomainRequests> {
           label: localizations.copyHost,
           onClick: () {
             Clipboard.setData(ClipboardData(text: Uri.parse(widget.domain).host));
-            FlutterToastr.show(localizations.copied, context);
+            Toast.show(localizations.copied, context);
           }),
       ContextMenuItem.separator(),
       ContextMenuItem.submenu(label: localizations.domainFilter, submenu: hostFilterMenu()),
@@ -598,9 +598,9 @@ class _DomainRequestsState extends State<DomainRequests> {
       var proxyInfo = widget.proxyServer.isRunning ? ProxyInfo.of("127.0.0.1", widget.proxyServer.port) : null;
       try {
         await HttpClients.proxyRequest(request, proxyInfo: proxyInfo, timeout: const Duration(seconds: 3));
-        if (mounted) FlutterToastr.show(localizations.reSendRequest, rootNavigator: true, context);
+        if (mounted) Toast.show(localizations.reSendRequest, rootNavigator: true, context);
       } catch (e) {
-        if (mounted) FlutterToastr.show('${localizations.fail}$e', rootNavigator: true, context);
+        if (mounted) Toast.show('${localizations.fail}$e', rootNavigator: true, context);
       }
     }
   }
@@ -616,21 +616,21 @@ class _DomainRequestsState extends State<DomainRequests> {
           onClick: () {
             HostFilter.blacklist.add(Uri.parse(widget.domain).host);
             configuration.flushConfig();
-            FlutterToastr.show(localizations.addSuccess, context);
+            Toast.show(localizations.addSuccess, context);
           }),
       ContextMenuItem.normal(
           label: localizations.domainWhitelist,
           onClick: () {
             HostFilter.whitelist.add(Uri.parse(widget.domain).host);
             configuration.flushConfig();
-            FlutterToastr.show(localizations.addSuccess, context);
+            Toast.show(localizations.addSuccess, context);
           }),
       ContextMenuItem.normal(
           label: localizations.deleteWhitelist,
           onClick: () {
             HostFilter.whitelist.remove(Uri.parse(widget.domain).host);
             configuration.flushConfig();
-            FlutterToastr.show(localizations.deleteSuccess, context);
+            Toast.show(localizations.deleteSuccess, context);
           }),
     ];
   }
@@ -639,7 +639,7 @@ class _DomainRequestsState extends State<DomainRequests> {
     widget.onDelete?.call(widget.domain);
     widget.requestMap.clear();
     widget.body.clear();
-    FlutterToastr.show(localizations.deleteSuccess, context);
+    Toast.show(localizations.deleteSuccess, context);
   }
 }
 

@@ -18,7 +18,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/native/vpn.dart';
 import 'package:proxypin/network/bin/server.dart';
@@ -90,11 +90,11 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
 
   @override
   void dispose() {
-    windowManager.removeListener(this);
-    WidgetsBinding.instance.removeObserver(this);
     if (Platforms.isDesktop()) {
+      windowManager.removeListener(this);
       DesktopTrayManager.instance.setQuitHandler(null);
     }
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -167,7 +167,7 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
       await windowManager.destroy();
     }
 
-    if (!Platform.isWindows && !Platform.isLinux) {
+    if (!Platforms.isWindows() && !Platforms.isLinux()) {
       try {
         await SystemNavigator.pop(animated: true).timeout(const Duration(milliseconds: 150));
       } catch (_) {
@@ -180,9 +180,11 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
 
   @override
   Future<AppExitResponse> didRequestAppExit() async {
-    bool isPreventClose = await windowManager.isPreventClose();
-    if (!isPreventClose || Platform.isMacOS) {
-      await appExit();
+    if (Platforms.isDesktop()) {
+      bool isPreventClose = await windowManager.isPreventClose();
+      if (!isPreventClose || Platforms.isMacOS()) {
+        await appExit();
+      }
     }
     return super.didRequestAppExit();
   }
@@ -196,7 +198,7 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
         });
       }
 
-      if (Platforms.isMobile() && started == false) {
+      if (Platforms.supportVpn() && started == false) {
         Vpn.isRunning().then((value) {
           Vpn.isVpnStarted = value;
           SocketLaunch.startStatus.value = ValueWrap.of(value);
@@ -239,7 +241,7 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
             }).catchError((e) {
               logger.e("stop proxy server failed", error: e);
               if (mounted) {
-                FlutterToastr.show(localizations.fail, context, duration: 3);
+                Toast.show(localizations.fail, context, duration: 3);
                 setState(() {
                   started = false;
                 });
@@ -272,7 +274,7 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
       }).catchError((e) {
         logger.e("启动代理服务器失败", error: e);
         String message = localizations.proxyPortRepeat(widget.proxyServer.port);
-        FlutterToastr.show(message, context, duration: 3);
+        Toast.show(message, context, duration: 3);
       });
     } finally {
       Future.delayed(const Duration(seconds: 5)).then((value) {
@@ -281,7 +283,7 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
         }
         if (Platforms.isDesktop()) {
           PCCertChecker.check(context);
-        } else if (Platform.isIOS) {
+        } else if (Platforms.isIOS()) {
           IOSCertChecker.check(context);
         }
       });

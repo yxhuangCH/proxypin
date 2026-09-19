@@ -16,7 +16,7 @@
 
 import 'package:code_forge/code_forge.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:get/get.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/components/manager/rewrite_rule.dart';
@@ -141,14 +141,7 @@ class _RewriteUpdateAddState extends State<RewriteUpdateAddDialog> {
     _findController.isRegex = useRegex;
     initTestData();
     keyController.addListener(onInputChangeMatch);
-
-    var textVersion = _codeDataController.contentVersion;
-    _codeDataController.addListener(() {
-      if (textVersion != _codeDataController.contentVersion) {
-        textVersion = _codeDataController.contentVersion;
-        onInputChangeMatch();
-      }
-    });
+    _codeDataController.addListener(onInputChangeMatch);
   }
 
   @override
@@ -190,7 +183,7 @@ class _RewriteUpdateAddState extends State<RewriteUpdateAddDialog> {
           TextButton(
               onPressed: () {
                 if (!(formKey.currentState as FormState).validate()) {
-                  FlutterToastr.show(localizations.cannotBeEmpty, context, position: FlutterToastr.center);
+                  Toast.show(localizations.cannotBeEmpty, context, position: Toast.center);
                   return;
                 }
                 rewriteItem.key = keyController.text;
@@ -546,7 +539,7 @@ class _UpdateListState extends State<UpdateList> {
           child: Text(localizations.delete),
           onTap: () async {
             widget.items.removeAt(index);
-            if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+            if (mounted) Toast.show(localizations.deleteSuccess, context);
           }),
     ]).then((value) {
       setState(() {

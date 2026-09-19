@@ -4,10 +4,11 @@ import 'dart:math' as math;
 
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/components/manager/request_crypto_manager.dart';
 import 'package:proxypin/network/util/logger.dart';
@@ -134,7 +135,7 @@ class _RequestCryptoPageState extends State<RequestCryptoPage> {
   }
 
   Future<void> _import() async {
-    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+    FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
     final path = result?.files.single.path;
     if (path == null) return;
     try {
@@ -144,10 +145,10 @@ class _RequestCryptoPageState extends State<RequestCryptoPage> {
         await manager.addRule(CryptoRule.fromJson(Map<String, dynamic>.from(item)));
       }
       _refreshConfig(force: true);
-      if (mounted) FlutterToastr.show(localizations.importSuccess, context);
+      if (mounted) Toast.show(localizations.importSuccess, context);
     } catch (e) {
       logger.e('导入失败 $path', error: e);
-      if (mounted) FlutterToastr.show('${localizations.importFailed} $e', context);
+      if (mounted) Toast.show('${localizations.importFailed} $e', context);
     }
   }
 }
@@ -369,9 +370,9 @@ class _CryptoRuleListState extends State<CryptoRuleList> {
     if (indexes.isEmpty) return;
     indexes.sort();
     final data = indexes.map((i) => manager.rules[i].toJson()).toList();
-    String? path = await FilePicker.saveFile(fileName: 'request_crypto.json', bytes: utf8.encode(jsonEncode(data)));
+    String? path = await FilePickerUtil.saveFile(fileName: 'request_crypto.json', bytes: utf8.encode(jsonEncode(data)));
     if (path == null) return;
-    if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+    if (mounted) Toast.show(localizations.exportSuccess, context);
   }
 
   // Format AES key for display: strip optional 'base64:' prefix and truncate long values

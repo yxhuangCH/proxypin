@@ -17,10 +17,11 @@
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/components/manager/hosts_manager.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/ui/component/utils.dart';
@@ -294,13 +295,13 @@ class _HostsPageState extends State<HostsPage> {
         multiple = false;
         items.clear();
       });
-      if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+      if (mounted) Toast.show(localizations.deleteSuccess, context);
     });
   }
 
   //导入
   Future<void> import() async {
-    final FilePickerResult? result = await FilePicker.pickFiles(type: FileType.any);
+    final FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.any);
     var file = result?.files.single;
     if (file == null) {
       return;
@@ -326,13 +327,13 @@ class _HostsPageState extends State<HostsPage> {
 
       saveConfig();
       if (mounted) {
-        FlutterToastr.show(localizations.importSuccess, context);
+        Toast.show(localizations.importSuccess, context);
       }
       setState(() {});
     } catch (e, t) {
       logger.e('导入失败 $file', error: e, stackTrace: t);
       if (mounted) {
-        FlutterToastr.show("${localizations.importFailed} $e", context);
+        Toast.show("${localizations.importFailed} $e", context);
       }
     }
   }
@@ -348,11 +349,11 @@ class _HostsPageState extends State<HostsPage> {
       list.add(json);
     }
 
-    var path = await FilePicker.saveFile(fileName: fileName, bytes: utf8.encode(jsonEncode(list)));
+    var path = await FilePickerUtil.saveFile(fileName: fileName, bytes: utf8.encode(jsonEncode(list)));
     if (path == null) {
       return;
     }
-    if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+    if (mounted) Toast.show(localizations.exportSuccess, context);
   }
 }
 
@@ -453,9 +454,9 @@ class _HostsEditDialogState extends State<HostsEditDialog> {
           TextButton(
               onPressed: () {
                 if (!(formKey.currentState as FormState).validate()) {
-                  FlutterToastr.show(
+                  Toast.show(
                       "${localizations.domain} ${localizations.toAddress} ${localizations.cannotBeEmpty}", context,
-                      position: FlutterToastr.center);
+                      position: Toast.center);
                   return;
                 }
 

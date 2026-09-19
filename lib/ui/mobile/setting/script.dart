@@ -16,6 +16,7 @@
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,7 +25,7 @@ import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:re_highlight/styles/monokai-sublime.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:re_highlight/languages/javascript.dart';
 import 'package:proxypin/network/components/manager/script_manager.dart';
 import 'package:proxypin/network/util/logger.dart';
@@ -33,6 +34,7 @@ import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/mobile/widgets/floating_window.dart';
 import 'package:proxypin/utils/lang.dart';
 import 'package:proxypin/utils/platform.dart';
+import 'package:proxypin/utils/share.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -121,7 +123,7 @@ class _MobileScriptState extends State<MobileScript> {
 
   //导入js
   Future<void> import() async {
-    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.any);
+    FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.any);
     if (result == null || result.files.isEmpty) {
       return;
     }
@@ -142,13 +144,13 @@ class _MobileScriptState extends State<MobileScript> {
 
       _refreshScript();
       if (mounted) {
-        FlutterToastr.show(localizations.importSuccess, context);
+        Toast.show(localizations.importSuccess, context);
       }
       setState(() {});
     } catch (e, t) {
       logger.e('导入失败 $file', error: e, stackTrace: t);
       if (mounted) {
-        FlutterToastr.show("${localizations.importFailed} $e", context);
+        Toast.show("${localizations.importFailed} $e", context);
       }
     }
   }
@@ -442,14 +444,14 @@ class _ScriptEditState extends State<ScriptEdit> {
     if (_fetchingRemoteScript.value) return;
     final remoteUrl = remoteUrlController.text.trim();
     if (remoteUrl.isEmpty) {
-      FlutterToastr.show("${localizations.remoteUrl} ${localizations.cannotBeEmpty}", context,
-          position: FlutterToastr.top);
+      Toast.show("${localizations.remoteUrl} ${localizations.cannotBeEmpty}", context,
+          position: Toast.top);
       return;
     }
 
     final uri = Uri.tryParse(remoteUrl);
     if (uri == null || !(uri.scheme == 'http' || uri.scheme == 'https')) {
-      FlutterToastr.show("${localizations.remoteUrl} ${localizations.fail}", context, position: FlutterToastr.top);
+      Toast.show("${localizations.remoteUrl} ${localizations.fail}", context, position: Toast.top);
       return;
     }
 
@@ -457,7 +459,7 @@ class _ScriptEditState extends State<ScriptEdit> {
       _fetchingRemoteScript.value = true;
       final resp = await http.get(uri);
       if (resp.statusCode < 200 || resp.statusCode >= 300) {
-        FlutterToastr.show("Fetch failed: HTTP ${resp.statusCode}", context, position: FlutterToastr.top);
+        Toast.show("Fetch failed: HTTP ${resp.statusCode}", context, position: Toast.top);
         return;
       }
       final content = utf8.decode(resp.bodyBytes);
@@ -467,7 +469,7 @@ class _ScriptEditState extends State<ScriptEdit> {
       }
     } catch (e) {
       if (mounted) {
-        FlutterToastr.show("Fetch failed: $e", context, position: FlutterToastr.top);
+        Toast.show("Fetch failed: $e", context, position: Toast.top);
       }
     } finally {
       _fetchingRemoteScript.value = false;
@@ -502,14 +504,14 @@ class _ScriptEditState extends State<ScriptEdit> {
               TextButton(
                   onPressed: () async {
                     if (!(formKey.currentState as FormState).validate()) {
-                      FlutterToastr.show("${localizations.name} URL ${localizations.cannotBeEmpty}", context,
-                          position: FlutterToastr.top);
+                      Toast.show("${localizations.name} URL ${localizations.cannotBeEmpty}", context,
+                          position: Toast.top);
                       return;
                     }
                     // 收集所有非空、去重的 url
                     final urls = urlControllers.map((c) => c.text.trim()).where((u) => u.isNotEmpty).toSet().toList();
                     if (urls.isEmpty) {
-                      FlutterToastr.show("URL ${localizations.cannotBeEmpty}", context, position: FlutterToastr.top);
+                      Toast.show("URL ${localizations.cannotBeEmpty}", context, position: Toast.top);
                       return;
                     }
 
@@ -517,8 +519,8 @@ class _ScriptEditState extends State<ScriptEdit> {
                     final remoteUrl = _useRemote ? remoteUrlController.text.trim() : '';
                     final hasRemote = remoteUrl.isNotEmpty;
                     if (_useRemote && !hasRemote) {
-                      FlutterToastr.show("Remote URL ${localizations.cannotBeEmpty}", context,
-                          position: FlutterToastr.top);
+                      Toast.show("Remote URL ${localizations.cannotBeEmpty}", context,
+                          position: Toast.top);
                       return;
                     }
 
@@ -537,7 +539,7 @@ class _ScriptEditState extends State<ScriptEdit> {
 
                     _refreshScript(force: true);
                     if (context.mounted) {
-                      FlutterToastr.show(localizations.saveSuccess, context);
+                      Toast.show(localizations.saveSuccess, context);
                       Navigator.of(context).maybePop(true);
                     }
                   },
@@ -727,7 +729,7 @@ class _ScriptEditState extends State<ScriptEdit> {
                                     icon: const Icon(Icons.copy_all_outlined, size: 20),
                                     onPressed: () {
                                       Clipboard.setData(ClipboardData(text: script.text));
-                                      FlutterToastr.show(localizations.copied, context, position: FlutterToastr.top);
+                                      Toast.show(localizations.copied, context, position: Toast.top);
                                     })),
                             Tooltip(
                                 message: 'Reset',
@@ -1003,7 +1005,7 @@ class _ScriptListState extends State<ScriptList> {
                   onPressed: () async {
                     await (await ScriptManager.instance).removeScript(index);
                     _refreshScript(force: true);
-                    if (context.mounted) FlutterToastr.show(localizations.importSuccess, context);
+                    if (context.mounted) Toast.show(localizations.importSuccess, context);
                   }),
               Container(color: Theme.of(context).hoverColor, height: 8),
               TextButton(
@@ -1079,7 +1081,7 @@ class _ScriptListState extends State<ScriptList> {
       fileNameOverrides: [fileName],
       sharePositionOrigin: box?.paintBounds,
     );
-    SharePlus.instance.share(shareParams);
+    ShareUtil.share(shareParams);
   }
 
   void enableStatus(bool enable) {
@@ -1103,7 +1105,7 @@ class _ScriptListState extends State<ScriptList> {
       });
       _refreshScript(force: true);
 
-      if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+      if (mounted) Toast.show(localizations.deleteSuccess, context);
     });
   }
 }

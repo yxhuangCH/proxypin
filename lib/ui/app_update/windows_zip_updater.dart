@@ -6,6 +6,7 @@ import 'package:ffi/ffi.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/utils/desktop_tray.dart';
+import 'package:proxypin/utils/platform.dart';
 
 /// Windows 原地更新：解压 zip -> 启动 helper 脚本 -> 等待当前进程退出 -> robocopy 覆盖 -> 重启。
 class WindowsZipUpdater {
@@ -30,7 +31,7 @@ class WindowsZipUpdater {
   }
 
   static Future<bool> install(String version, File zipFile) async {
-    if (!Platform.isWindows || _updating) {
+    if (!Platforms.isWindows() || _updating) {
       return false;
     }
 

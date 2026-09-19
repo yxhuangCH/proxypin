@@ -20,13 +20,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/http/content_type.dart';
 import 'package:proxypin/network/http/http.dart';
 import 'package:proxypin/network/util/logger.dart';
 
 import '../../utils/lang.dart';
 import '../../utils/platform.dart';
+import 'package:proxypin/utils/platform.dart';
 
 const contentMap = {
   ContentType.json: Icons.data_object,
@@ -171,7 +172,7 @@ Widget contextMenu(BuildContext context, EditableTextState editableTextState, {C
       onPressed: () {
         editableTextState.copySelection(SelectionChangedCause.tap);
 
-        FlutterToastr.show(AppLocalizations.of(context)!.copied, context);
+        Toast.show(AppLocalizations.of(context)!.copied, context);
         unSelect(editableTextState);
 
         editableTextState.hideToolbar();
@@ -183,7 +184,7 @@ Widget contextMenu(BuildContext context, EditableTextState editableTextState, {C
       onPressed: () {
         unSelect(editableTextState);
         Clipboard.setData(ClipboardData(text: editableTextState.textEditingValue.text)).then((value) {
-          if (context.mounted) FlutterToastr.show(AppLocalizations.of(context)!.copied, context);
+          if (context.mounted) Toast.show(AppLocalizations.of(context)!.copied, context);
           editableTextState.hideToolbar();
         });
       },
@@ -201,7 +202,7 @@ Widget contextMenu(BuildContext context, EditableTextState editableTextState, {C
     list.add(customItem);
   }
 
-  if (Platform.isIOS) {
+  if (Platforms.isIOS()) {
     list.add(ContextMenuButtonItem(
       onPressed: () async {
         editableTextState.shareSelection(SelectionChangedCause.toolbar);

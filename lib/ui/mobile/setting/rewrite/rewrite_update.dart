@@ -21,7 +21,7 @@ import 'package:code_forge/code_forge/styling.dart';
 import 'package:flutter/material.dart';
 import 'package:re_highlight/styles/atom-one-dark.dart';
 import 'package:re_highlight/styles/atom-one-light.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:get/get.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/components/manager/rewrite_rule.dart';
@@ -146,14 +146,7 @@ class _RewriteUpdateAddState extends State<RewriteUpdateEdit> {
 
     initTestData();
     keyController.addListener(onInputChangeMatch);
-
-    var textVersion = _codeDataController.contentVersion;
-    _codeDataController.addListener(() {
-      if (textVersion != _codeDataController.contentVersion) {
-        textVersion = _codeDataController.contentVersion;
-        onInputChangeMatch();
-      }
-    });
+    _codeDataController.addListener(onInputChangeMatch);
   }
 
   @override
@@ -191,7 +184,7 @@ class _RewriteUpdateAddState extends State<RewriteUpdateEdit> {
               TextButton(
                   onPressed: () {
                     if (!(formKey.currentState as FormState).validate()) {
-                      FlutterToastr.show(i18n.cannotBeEmpty, context, position: FlutterToastr.center);
+                      Toast.show(i18n.cannotBeEmpty, context, position: Toast.center);
                       return;
                     }
                     (formKey.currentState as FormState).save();
@@ -546,7 +539,7 @@ class _UpdateListState extends State<UpdateList> {
                 text: i18n.delete,
                 onPressed: () async {
                   widget.items.removeAt(index);
-                  if (mounted) FlutterToastr.show(i18n.deleteSuccess, context);
+                  if (mounted) Toast.show(i18n.deleteSuccess, context);
                 }),
             Container(color: Theme.of(context).hoverColor, height: 8),
             TextButton(

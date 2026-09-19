@@ -19,10 +19,11 @@ import 'dart:io';
 
 import 'package:date_format/date_format.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/bin/configuration.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/channel/host_port.dart';
@@ -39,6 +40,7 @@ import 'package:proxypin/ui/mobile/request/search.dart';
 import 'package:proxypin/utils/listenable_list.dart';
 import 'package:proxypin/utils/platform.dart';
 import 'package:proxypin/utils/quick_share.dart';
+import 'package:proxypin/utils/share.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../utils/har.dart';
@@ -72,11 +74,11 @@ void _repeatAllRequests(Iterable<HttpRequest> requests, ProxyServer proxyServer,
     try {
       await HttpClients.proxyRequest(httpRequest, proxyInfo: proxyInfo, timeout: const Duration(seconds: 3));
       if (context != null && context.mounted) {
-        FlutterToastr.show(localizations!.reSendRequest, rootNavigator: true, context);
+        Toast.show(localizations!.reSendRequest, rootNavigator: true, context);
       }
     } catch (e) {
       if (context != null && context.mounted) {
-        FlutterToastr.show('${localizations!.fail} $e', rootNavigator: true, context);
+        Toast.show('${localizations!.fail} $e', rootNavigator: true, context);
       }
     }
   }
@@ -210,7 +212,7 @@ class _MobileHistoryState extends State<MobileHistory> {
 
   //导入har
   Future<void> import(HistoryStorage storage) async {
-    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.any);
+    FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.any);
     if (result == null || result.files.isEmpty) {
       return;
     }
@@ -219,12 +221,12 @@ class _MobileHistoryState extends State<MobileHistory> {
       var historyItem = await storage.addHarFile(result.files.single.xFile);
       setState(() {
         toRequestsView(historyItem, storage);
-        FlutterToastr.show(localizations.importSuccess, context);
+        Toast.show(localizations.importSuccess, context);
       });
     } catch (e, t) {
       logger.e("导入失败", error: e, stackTrace: t);
       if (mounted) {
-        FlutterToastr.show("${localizations.importFailed} $e", context);
+        Toast.show("${localizations.importFailed} $e", context);
       }
     }
   }
@@ -235,7 +237,7 @@ class _MobileHistoryState extends State<MobileHistory> {
   Widget buildItem(HistoryStorage storage, int index, HistoryItem item) {
     return GestureDetector(
         onLongPressStart: (detail) async {
-          if (Platform.isAndroid) HapticFeedback.mediumImpact();
+          if (Platforms.isAndroid()) HapticFeedback.mediumImpact();
           setState(() {
             selectIndex = index;
           });
@@ -311,14 +313,14 @@ class _MobileHistoryState extends State<MobileHistory> {
       rect = Rect.fromCenter(center: offset, width: 1, height: 1);
     }
 
-    SharePlus.instance.share(ShareParams(files: [file], fileNameOverrides: [fileName], sharePositionOrigin: rect));
+    ShareUtil.share(ShareParams(files: [file], fileNameOverrides: [fileName], sharePositionOrigin: rect));
     Future.delayed(const Duration(seconds: 30), () => item.requests = null);
   }
 
   Future<void> sendToRemote(HistoryStorage storage, HistoryItem item) async {
     if (!QuickShareService.isRemoteConnected(widget.proxyServer)) {
       if (mounted) {
-        FlutterToastr.show('${localizations.notConnected} ${localizations.remoteDevice}', context);
+        Toast.show('${localizations.notConnected} ${localizations.remoteDevice}', context);
       }
       return;
     }
@@ -326,14 +328,14 @@ class _MobileHistoryState extends State<MobileHistory> {
     final requests = await storage.getRequests(item);
     if (requests.isEmpty) {
       if (mounted) {
-        FlutterToastr.show(localizations.emptyData, context);
+        Toast.show(localizations.emptyData, context);
       }
       return;
     }
 
     final result = await QuickShareService.sendHistoryToRemote(widget.proxyServer, requests, historyName: item.name);
     if (mounted) {
-      FlutterToastr.show(
+      Toast.show(
           '${localizations.send}: ${localizations.success} ${result.success}, ${localizations.fail} ${result.failed}',
           context);
     }
@@ -358,7 +360,7 @@ class _MobileHistoryState extends State<MobileHistory> {
                 child: Text(localizations.save),
                 onPressed: () {
                   if (name.isEmpty) {
-                    FlutterToastr.show(localizations.historyEmptyName, context, position: 2);
+                    Toast.show(localizations.historyEmptyName, context, position: 2);
                     return;
                   }
                   Navigator.of(context).pop();
@@ -390,7 +392,7 @@ class _MobileHistoryState extends State<MobileHistory> {
                       }
                       storage.removeHistory(index);
                     });
-                    FlutterToastr.show(localizations.deleteSuccess, context);
+                    Toast.show(localizations.deleteSuccess, context);
                     Navigator.pop(context);
                   },
                   child: Text(localizations.delete)),

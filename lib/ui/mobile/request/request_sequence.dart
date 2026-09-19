@@ -2,7 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:get/get.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/bin/server.dart';
@@ -184,7 +184,7 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
       });
 
       if (mounted) {
-        FlutterToastr.show(localizations.deleteSuccess, context);
+        Toast.show(localizations.deleteSuccess, context);
       }
     });
   }
@@ -232,7 +232,6 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
                 controller: PrimaryScrollController.maybeOf(context),
                 child: ListView.separated(
                     controller: PrimaryScrollController.maybeOf(context),
-                    scrollCacheExtent: ScrollCacheExtent.viewport(2.0),
                     separatorBuilder: (context, index) =>
                         Divider(thickness: 0.2, height: 0, color: Theme.of(context).dividerColor),
                     itemCount: view.length,
@@ -316,11 +315,11 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
       try {
         await HttpClients.proxyRequest(httpRequest, proxyInfo: proxyInfo, timeout: const Duration(seconds: 3));
         if (mounted) {
-          FlutterToastr.show(localizations.reSendRequest, rootNavigator: true, context);
+          Toast.show(localizations.reSendRequest, rootNavigator: true, context);
         }
       } catch (e) {
         if (mounted) {
-          FlutterToastr.show('${localizations.fail} $e', rootNavigator: true, context);
+          Toast.show('${localizations.fail} $e', rootNavigator: true, context);
         }
       }
     }

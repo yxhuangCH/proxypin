@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:proxypin/utils/platform.dart';
 
 class Fonts {
   String thin = "PingFangSC-Thin";
@@ -44,8 +44,8 @@ class AndroidFonts extends Fonts {
   String bold = "sans-serif-bold";
 }
 
-Fonts fonts = Platform.isAndroid
+Fonts fonts = Platforms.isAndroid()
     ? AndroidFonts()
-    : Platform.isWindows
+    : Platforms.isWindows()
         ? WindowsFonts()
         : AppleFonts();

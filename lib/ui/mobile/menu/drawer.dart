@@ -50,6 +50,7 @@ import 'package:proxypin/utils/listenable_list.dart';
 import '../../component/proxy_port_setting.dart';
 import '../../component/widgets.dart';
 import '../../desktop/setting/external_proxy.dart';
+import 'package:proxypin/utils/platform.dart';
 
 ///左侧抽屉
 class DrawerWidget extends StatelessWidget {
@@ -162,10 +163,12 @@ class DrawerWidget extends StatelessWidget {
                 title: Text(localizations.requestCrypto),
                 leading: const Icon(Icons.lock_outline),
                 onTap: () => navigator(context, const MobileRequestCryptoPage())),
-            ListTile(
-                title: Text(localizations.script),
-                leading: const Icon(Icons.code),
-                onTap: () => navigator(context, const MobileScript())),
+            // 鸿蒙 MVP 不支持脚本（flutter_js 无 ohos 原生库），隐藏入口
+            if (Platforms.supportScript())
+              ListTile(
+                  title: Text(localizations.script),
+                  leading: const Icon(Icons.code),
+                  onTap: () => navigator(context, const MobileScript())),
             ListTile(
                 title: Text(localizations.breakpoint),
                 leading: const Icon(Icons.bug_report_outlined),
@@ -252,7 +255,7 @@ class _SettingPage extends StatelessWidget {
                     title: '${localizations.proxy}${isCN ? '' : ' '}${localizations.port}',
                     textStyle: const TextStyle(fontSize: 16)),
                 Divider(height: 0, thickness: 0.3, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
-                if (Platform.isAndroid)
+                if (Platforms.isAndroid())
                   ListTile(
                       title: Text(localizations.systemProxy),
                       trailing: SwitchWidget(
@@ -262,7 +265,7 @@ class _SettingPage extends StatelessWidget {
                             configuration.enableSystemProxy = value;
                             proxyServer.configuration.flushConfig();
                           })),
-                if (Platform.isAndroid)
+                if (Platforms.isAndroid())
                   Divider(height: 0, thickness: 0.3, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
                 ListTile(
                     title: const Text("SOCKS5"),
@@ -386,9 +389,8 @@ class FilterMenu extends StatelessWidget {
                           context,
                           MobileFilterWidget(
                               configuration: proxyServer.configuration, hostList: HostFilter.blacklist))),
-                  Platform.isIOS
-                      ? const SizedBox()
-                      : Column(mainAxisSize: MainAxisSize.min, children: [
+                  Platforms.supportAppFilter()
+                      ? Column(mainAxisSize: MainAxisSize.min, children: [
                           Divider(
                               height: 0, thickness: 0.4, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
                           ListTile(
@@ -402,6 +404,7 @@ class FilterMenu extends StatelessWidget {
                               trailing: const Icon(Icons.arrow_right),
                               onTap: () => navigator(context, AppBlacklist(proxyServer: proxyServer)))
                         ])
+                      : const SizedBox()
                 ]))));
   }
 }

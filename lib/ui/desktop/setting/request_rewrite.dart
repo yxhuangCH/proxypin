@@ -18,10 +18,11 @@ import 'dart:io';
 
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/components/manager/request_rewrite_manager.dart';
 import 'package:proxypin/network/components/manager/rewrite_rule.dart';
@@ -157,7 +158,7 @@ class RequestRewriteState extends State<RequestRewriteWidget> {
 
   //导入js
   Future<void> import() async {
-    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['config', 'json']);
+    FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.custom, allowedExtensions: ['config', 'json']);
     String? path = result?.files.single.path;
 
     if (path == null) {
@@ -175,13 +176,13 @@ class RequestRewriteState extends State<RequestRewriteWidget> {
       }
 
       if (mounted) {
-        FlutterToastr.show(localizations.importSuccess, context);
+        Toast.show(localizations.importSuccess, context);
       }
       setState(() {});
     } catch (e, t) {
       logger.e('导入失败 $path', error: e, stackTrace: t);
       if (mounted) {
-        FlutterToastr.show("${localizations.importFailed} $e", context);
+        Toast.show("${localizations.importFailed} $e", context);
       }
     }
   }
@@ -379,7 +380,7 @@ class _RequestRuleListState extends State<RequestRuleList> {
     }
 
     await File(path).writeAsBytes(utf8.encode(jsonEncode(list)));
-    if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+    if (mounted) Toast.show(localizations.exportSuccess, context);
   }
 
   //删除
@@ -397,7 +398,7 @@ class _RequestRuleListState extends State<RequestRuleList> {
       setState(() {
         selected.clear();
       });
-      if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+      if (mounted) Toast.show(localizations.deleteSuccess, context);
     });
   }
 
@@ -609,7 +610,7 @@ class _RewriteRuleEditState extends State<RewriteRuleEdit> {
               child: Text(localizations.save),
               onPressed: () async {
                 if (!(formKey.currentState as FormState).validate()) {
-                  FlutterToastr.show(localizations.cannotBeEmpty, context, position: FlutterToastr.center);
+                  Toast.show(localizations.cannotBeEmpty, context, position: Toast.center);
                   return;
                 }
 

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/util/logger.dart';
 
 import '../component/buttons.dart';
@@ -41,7 +41,7 @@ class _AesWidgetState extends State<AesPage> {
       outputController.text = base64.encode(encrypted);
     } catch (e) {
       logger.e("Encryption error: $e");
-      FlutterToastr.show("Encryption failed", context, duration: 3, backgroundColor: Colors.red);
+      Toast.show("Encryption failed", context, duration: 3, backgroundColor: Colors.red);
     }
   }
 
@@ -58,7 +58,7 @@ class _AesWidgetState extends State<AesPage> {
     } catch (e) {
       outputController.text = "";
       logger.e("Decryption error: $e");
-      FlutterToastr.show("Decryption failed", context, duration: 3, backgroundColor: Colors.red);
+      Toast.show("Decryption failed", context, duration: 3, backgroundColor: Colors.red);
     }
   }
 
@@ -210,7 +210,7 @@ class _AesWidgetState extends State<AesPage> {
             style: Buttons.buttonStyle,
             onPressed: () {
               Clipboard.setData(ClipboardData(text: outputController.text));
-              FlutterToastr.show(localizations.copied, context);
+              Toast.show(localizations.copied, context);
             },
             icon: const Icon(Icons.copy),
             label: Text(localizations.copy),

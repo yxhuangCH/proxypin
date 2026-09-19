@@ -15,6 +15,7 @@
  */
 import 'package:code_forge/code_forge.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:re_highlight/styles/atom-one-dark.dart';
@@ -262,7 +263,7 @@ class RewriteReplaceState extends State<MobileRewriteReplace> {
       Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
         FilledButton(
             onPressed: () async {
-              FilePickerResult? result = await FilePicker.pickFiles();
+              FilePickerResult? result = await FilePickerUtil.pickFiles();
               if (result == null) {
                 return;
               }

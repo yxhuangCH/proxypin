@@ -19,13 +19,14 @@ import 'dart:io';
 
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:code_forge/code_forge.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:re_highlight/styles/monokai-sublime.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/ui/component/search/finder.dart';
 import 'package:re_highlight/languages/javascript.dart';
 import 'package:http/http.dart' as http;
@@ -170,7 +171,7 @@ class _ScriptWidgetState extends State<ScriptWidget> {
 
   //导入js
   Future<void> import() async {
-    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+    FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
     final path = result?.files.single.path;
 
     if (path == null) {
@@ -191,13 +192,13 @@ class _ScriptWidgetState extends State<ScriptWidget> {
 
       _refreshScript();
       if (mounted) {
-        FlutterToastr.show(localizations.importSuccess, context);
+        Toast.show(localizations.importSuccess, context);
       }
       setState(() {});
     } catch (e, t) {
       logger.e('导入失败 $path', error: e, stackTrace: t);
       if (mounted) {
-        FlutterToastr.show("${localizations.importFailed} $e", context);
+        Toast.show("${localizations.importFailed} $e", context);
       }
     }
   }
@@ -356,14 +357,14 @@ class _ScriptEditState extends State<ScriptEdit> {
     if (_fetchingRemoteScript.value) return;
     final remoteUrl = remoteUrlController.text.trim();
     if (remoteUrl.isEmpty) {
-      FlutterToastr.show("${localizations.remoteUrl} ${localizations.cannotBeEmpty}", context,
-          position: FlutterToastr.top);
+      Toast.show("${localizations.remoteUrl} ${localizations.cannotBeEmpty}", context,
+          position: Toast.top);
       return;
     }
 
     final uri = Uri.tryParse(remoteUrl);
     if (uri == null || !(uri.scheme == 'http' || uri.scheme == 'https')) {
-      FlutterToastr.show("${localizations.remoteUrl} ${localizations.fail}", context, position: FlutterToastr.top);
+      Toast.show("${localizations.remoteUrl} ${localizations.fail}", context, position: Toast.top);
       return;
     }
 
@@ -371,7 +372,7 @@ class _ScriptEditState extends State<ScriptEdit> {
       _fetchingRemoteScript.value = true;
       final resp = await http.get(uri);
       if (resp.statusCode < 200 || resp.statusCode >= 300) {
-        FlutterToastr.show("Fetch failed: HTTP ${resp.statusCode}", context, position: FlutterToastr.top);
+        Toast.show("Fetch failed: HTTP ${resp.statusCode}", context, position: Toast.top);
         return;
       }
       script.text = resp.body;
@@ -380,7 +381,7 @@ class _ScriptEditState extends State<ScriptEdit> {
       }
     } catch (e) {
       if (mounted) {
-        FlutterToastr.show("Fetch failed: $e", context, position: FlutterToastr.top);
+        Toast.show("Fetch failed: $e", context, position: Toast.top);
       }
     } finally {
       _fetchingRemoteScript.value = false;
@@ -448,13 +449,13 @@ class _ScriptEditState extends State<ScriptEdit> {
         FilledButton(
             onPressed: () async {
               if (!(formKey.currentState as FormState).validate()) {
-                FlutterToastr.show("${localizations.name} URL ${localizations.cannotBeEmpty}", context,
-                    position: FlutterToastr.top);
+                Toast.show("${localizations.name} URL ${localizations.cannotBeEmpty}", context,
+                    position: Toast.top);
                 return;
               }
               final urls = urlControllers.map((c) => c.text.trim()).where((u) => u.isNotEmpty).toSet().toList();
               if (urls.isEmpty) {
-                FlutterToastr.show("URL ${localizations.cannotBeEmpty}", context, position: FlutterToastr.top);
+                Toast.show("URL ${localizations.cannotBeEmpty}", context, position: Toast.top);
                 return;
               }
 
@@ -462,8 +463,8 @@ class _ScriptEditState extends State<ScriptEdit> {
               final remoteUrl = _useRemote ? remoteUrlController.text.trim() : '';
               final hasRemote = remoteUrl.isNotEmpty;
               if (_useRemote && !hasRemote) {
-                FlutterToastr.show("${localizations.remoteUrl} ${localizations.cannotBeEmpty}", context,
-                    position: FlutterToastr.top);
+                Toast.show("${localizations.remoteUrl} ${localizations.cannotBeEmpty}", context,
+                    position: Toast.top);
                 return;
               }
 
@@ -641,7 +642,7 @@ class _ScriptEditState extends State<ScriptEdit> {
                                   icon: const Icon(Icons.copy_all_outlined, size: 20),
                                   onPressed: () {
                                     Clipboard.setData(ClipboardData(text: script.text));
-                                    FlutterToastr.show(localizations.copied, context, position: FlutterToastr.top);
+                                    Toast.show(localizations.copied, context, position: Toast.top);
                                   })),
                           Tooltip(
                               message: 'Reset',
@@ -969,7 +970,7 @@ class _ScriptListState extends State<ScriptList> {
     }
 
     await File(path).writeAsBytes(utf8.encode(jsonEncode(json)));
-    if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+    if (mounted) Toast.show(localizations.exportSuccess, context);
   }
 
   void enableStatus(bool enable) {
@@ -993,7 +994,7 @@ class _ScriptListState extends State<ScriptList> {
       });
       _refreshScript();
 
-      if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+      if (mounted) Toast.show(localizations.deleteSuccess, context);
     });
   }
 }

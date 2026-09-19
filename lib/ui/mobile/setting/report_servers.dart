@@ -3,7 +3,7 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/components/manager/report_server_manager.dart';
 import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/component/utils.dart';
@@ -31,10 +31,10 @@ class _ReportServersPageMobileState extends State<ReportServersPageMobile> {
     final uri = Uri.parse(url);
     try {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        FlutterToastr.show('Open guide failed', context);
+        Toast.show('Open guide failed', context);
       }
     } catch (e) {
-      FlutterToastr.show('Open guide failed: $e', context);
+      Toast.show('Open guide failed: $e', context);
     }
   }
 
@@ -201,9 +201,9 @@ class _ReportServerEditPageMobileState extends State<ReportServerEditPageMobile>
 
   void _onSave() {
     if (!(_formKey.currentState as FormState).validate()) {
-      FlutterToastr.show(
+      Toast.show(
           "${AppLocalizations.of(context)!.serverUrl} ${AppLocalizations.of(context)!.cannotBeEmpty}", context,
-          position: FlutterToastr.top);
+          position: Toast.top);
       return;
     }
 

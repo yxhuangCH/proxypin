@@ -15,11 +15,10 @@
  */
 
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/native/vpn.dart';
 import 'package:proxypin/network/bin/configuration.dart';
 import 'package:proxypin/network/bin/server.dart';
@@ -36,6 +35,7 @@ import 'package:proxypin/utils/ip.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:proxypin/utils/platform.dart';
 
 ///远程设备
 ///Remote device
@@ -126,16 +126,18 @@ class _RemoteDevicePageState extends State<RemoteDevicePage> {
             icon: const Icon(Icons.add_outlined),
             itemBuilder: (BuildContext context) {
               return <PopupMenuEntry>[
-                CustomPopupMenuItem(
-                    height: 32,
-                    child: ListTile(
-                        leading: const Icon(Icons.qr_code_scanner_outlined),
-                        dense: true,
-                        title: Text(localizations.scanCode),
-                        onTap: () {
-                          Navigator.maybePop(context);
-                          connectRemote();
-                        })),
+                // 鸿蒙 MVP 隐藏扫码入口（无相机扫码插件），保留手动输入地址
+                if (!Platforms.isOhos())
+                  CustomPopupMenuItem(
+                      height: 32,
+                      child: ListTile(
+                          leading: const Icon(Icons.qr_code_scanner_outlined),
+                          dense: true,
+                          title: Text(localizations.scanCode),
+                          onTap: () {
+                            Navigator.maybePop(context);
+                            connectRemote();
+                          })),
                 CustomPopupMenuItem(
                     height: 32,
                     child: ListTile(
@@ -194,7 +196,7 @@ class _RemoteDevicePageState extends State<RemoteDevicePage> {
               await setRemoteDeviceList(prefs, remoteDeviceList);
 
               setState(() {});
-              if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+              if (mounted) Toast.show(localizations.deleteSuccess, context);
             },
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 5),
@@ -241,7 +243,7 @@ class _RemoteDevicePageState extends State<RemoteDevicePage> {
         children: [
           const Icon(Icons.check_circle_outline_outlined, size: 55, color: Colors.green),
           const SizedBox(height: 6),
-          if (Platform.isIOS)
+          if (Platforms.isIOS())
             Row(
               children: [
                 Expanded(
@@ -348,7 +350,7 @@ class _RemoteDevicePageState extends State<RemoteDevicePage> {
               TextButton(
                   onPressed: () async {
                     if (host.isEmpty || port == null) {
-                      FlutterToastr.show(localizations.cannotBeEmpty, context);
+                      Toast.show(localizations.cannotBeEmpty, context);
                       return;
                     }
 
@@ -369,7 +371,7 @@ class _RemoteDevicePageState extends State<RemoteDevicePage> {
     if (scanRes == null) return;
 
     if (scanRes == "-1") {
-      if (context.mounted) FlutterToastr.show(localizations.invalidQRCode, context);
+      if (context.mounted) Toast.show(localizations.invalidQRCode, context);
       return;
     }
 
@@ -388,7 +390,7 @@ class _RemoteDevicePageState extends State<RemoteDevicePage> {
     }
 
     if (mounted) {
-      FlutterToastr.show(localizations.invalidQRCode, context);
+      Toast.show(localizations.invalidQRCode, context);
     }
   }
 

@@ -1,0 +1,111 @@
+/**
+自定义样式库
+**/
+
+.device-localstorage-link.mr-2 {
+  float: right;
+  margin-right: 150px;
+}
+
+@media (max-width: 767px) {
+  .device-localstorage-link.mr-2 {
+    float: left;
+    margin-right: 0;
+  }
+}
+
+.cdk-overlay-container {
+  z-index: 1200 !important;
+}
+
+html[lang='ru'] app-more-resources .dec,
+html[lang='en'] app-more-resources .dec {
+  line-height: 0.48rem !important;
+}
+
+ul.vjs-menu-content {
+  padding-left: 0 !important;
+  overflow-y: hidden !important;
+}
+
+html[lang='cn'] #mark .markdown-body table.layoutFixed.idpTab tr td:first-child,
+html[lang='cn'] #mark .markdown-body table.layoutFixed.idpTab tr td:first-child a {
+  word-break: break-all;
+  word-break: break-word;
+}
+
+#mark .markdown-body pre.autobreak.prettyprint ol li {
+  white-space: pre-wrap;
+}
+
+.vjs-fullscreen .vjs-tech[name='videoEncrypted'] {
+  position: static !important;
+}
+
+.video-js[name='videoEncrypted'] .vjs-volume-bar.vjs-slider-vertical {
+  margin: 1.35em auto !important;
+}
+
+.vjs-volume-bar.vjs-slider-vertical {
+  margin: 1.35em auto !important;
+}
+
+.vjs-menu-button-popup .vjs-menu .vjs-menu-content {
+  max-height: unset !important;
+}
+
+app-resource-item.ng-star-inserted {
+  display: block;
+}
+
+.suspensionMenu {
+  bottom: 40px !important;
+  opacity: 0.7;
+}
+
+.suspensionMenu:hover {
+  opacity: 1;
+}
+
+app-html-page #mark .markdown-body table.layoutFixed th {
+  word-break: break-word;
+}
+
+.markdown-body .hw-editor-tip {
+  position: relative;
+}
+
+.markdown-body .hw-editor-tip > .icon-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+}
+
+.markdown-body .hw-editor-tip > .icon-panel .icon-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.markdown-body .hw-editor-tip > .icon-panel .icon-img.icon-img-star,
+.markdown-body .hw-editor-tip > .icon-panel .icon-img.icon-img-info {
+  background: rgba(10, 89, 247, 0.06);
+  border-radius: 16px;
+}
+
+.markdown-body .hw-editor-tip > .icon-panel .icon-img.icon-img-warn {
+  background: rgba(245, 148, 41, 0.06);
+  border-radius: 16px;
+}
+
+.markdown-body .hw-editor-tip > .icon-panel .icon-img.icon-img-err {
+  background: rgba(245, 41, 41, 0.06);
+  border-radius: 16px;
+}
+
+#mark .markdown-body table.tableClass2_t tr:nth-child(2n + 1) td:nth-child(n + 1) a {
+  word-break: break-word;
+}

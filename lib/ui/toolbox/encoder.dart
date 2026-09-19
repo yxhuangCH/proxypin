@@ -5,7 +5,7 @@ import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/network/util/logger.dart';
 
 import '../component/buttons.dart';
@@ -139,7 +139,7 @@ class _EncoderState extends State<EncoderWidget> with SingleTickerProviderStateM
                 child: Text(localizations.copy),
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: outputTextController.text));
-                  FlutterToastr.show(localizations.copied, context);
+                  Toast.show(localizations.copied, context);
                 }),
           ],
         ),
@@ -162,7 +162,7 @@ class _EncoderState extends State<EncoderWidget> with SingleTickerProviderStateM
           result = encodeToUnicode(inputText);
       }
     } catch (e) {
-      FlutterToastr.show(localizations.encodeFail, context);
+      Toast.show(localizations.encodeFail, context);
     }
     outputTextController.text = result;
   }
@@ -192,7 +192,7 @@ class _EncoderState extends State<EncoderWidget> with SingleTickerProviderStateM
       }
     } catch (e, t) {
       logger.e("$e", error: e, stackTrace: t);
-      FlutterToastr.show(localizations.decodeFail, context);
+      Toast.show(localizations.decodeFail, context);
     }
     outputTextController.text = result;
   }

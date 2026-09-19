@@ -19,10 +19,11 @@ import 'dart:math';
 
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:get/get.dart';
 import 'package:image_pickers/image_pickers.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
@@ -200,7 +201,7 @@ class HttpBodyState extends State<HttpBodyWidget> {
     var tabController = FocusableActionDetector(
         shortcuts: {
           LogicalKeySet(
-                  Platform.isMacOS ? LogicalKeyboardKey.meta : LogicalKeyboardKey.control, LogicalKeyboardKey.keyF):
+                  Platforms.isMacOS() ? LogicalKeyboardKey.meta : LogicalKeyboardKey.control, LogicalKeyboardKey.keyF):
               ActivateIntent(),
           LogicalKeySet(LogicalKeyboardKey.escape): DismissIntent(),
         },
@@ -236,7 +237,7 @@ class HttpBodyState extends State<HttpBodyWidget> {
     //在新窗口打开
     if (widget.inNewWindow) {
       return Scaffold(
-          appBar: AppBar(title: titleWidget(inNewWindow: true), toolbarHeight: Platform.isWindows ? 36 : null),
+          appBar: AppBar(title: titleWidget(inNewWindow: true), toolbarHeight: Platforms.isWindows() ? 36 : null),
           body: tabController);
     }
     return tabController;
@@ -290,7 +291,7 @@ class HttpBodyState extends State<HttpBodyWidget> {
               var body = await bodyKey.currentState?.getBody();
               if (body == null) return;
               Clipboard.setData(ClipboardData(text: body)).then((_) {
-                if (mounted) FlutterToastr.show(localizations.copied, context);
+                if (mounted) Toast.show(localizations.copied, context);
               });
             },
           );
@@ -420,17 +421,23 @@ class HttpBodyState extends State<HttpBodyWidget> {
           var bytes = Uint8List.fromList(body);
           var extension = _imageExtension(bytes, bodyKey.currentState?.message?.headers.contentType);
           var fileName = "image_${DateTime.now().millisecondsSinceEpoch}.$extension";
-          if (Platform.isIOS) {
+          if (Platforms.isIOS()) {
             String? path = await ImagePickers.saveByteDataImageToGallery(bytes);
             if (path != null && mounted) {
-              FlutterToastr.show(localizations.saveSuccess, context, duration: 2, rootNavigator: true);
+              Toast.show(localizations.saveSuccess, context, duration: 2, rootNavigator: true);
             }
             return;
           }
 
-          String? path = await FilePicker.saveFile(fileName: fileName, bytes: bytes, type: FileType.image);
+          // 鸿蒙 MVP：file_picker 无 ohos 实现，降级提示
+          if (Platforms.isOhos()) {
+            Toast.show('当前平台暂不支持保存图片', context, duration: 2, rootNavigator: true);
+            return;
+          }
+
+          String? path = await FilePickerUtil.saveFile(fileName: fileName, bytes: bytes, type: FileType.image);
           if (path != null && mounted) {
-            FlutterToastr.show(localizations.saveSuccess, context, duration: 2, rootNavigator: true);
+            Toast.show(localizations.saveSuccess, context, duration: 2, rootNavigator: true);
           }
         });
   }
@@ -517,7 +524,7 @@ class HttpBodyState extends State<HttpBodyWidget> {
               builder: (BuildContext context) => RewriteRuleEdit(rule: rule, items: rewriteItems, request: request))
           .then((value) {
         if (value is RequestRewriteRule && mounted) {
-          FlutterToastr.show(localizations.saveSuccess, context);
+          Toast.show(localizations.saveSuccess, context);
         }
       });
     }
@@ -528,7 +535,7 @@ class HttpBodyState extends State<HttpBodyWidget> {
     if (Platforms.isDesktop()) {
       var size = MediaQuery.of(context).size;
       var ratio = 1.0;
-      if (Platform.isWindows) {
+      if (Platforms.isWindows()) {
         ratio = WindowManager.instance.getDevicePixelRatio();
       }
       final window = await DesktopMultiWindow.createWindow(jsonEncode(

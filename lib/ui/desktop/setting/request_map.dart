@@ -3,10 +3,11 @@ import 'dart:io';
 
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/components/manager/request_map_manager.dart';
 import 'package:proxypin/ui/component/app_dialog.dart';
@@ -141,7 +142,7 @@ class _RequestMapPageState extends State<RequestMapPage> {
 
   //导入js
   Future<void> import() async {
-    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+    FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
     final path = result?.files.single.path;
 
     if (path == null) {
@@ -404,7 +405,7 @@ class _RequestMapListState extends State<RequestMapList> {
 
     await File(path).writeAsBytes(utf8.encode(jsonEncode(json)));
 
-    if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+    if (mounted) Toast.show(localizations.exportSuccess, context);
   }
 
   void enableStatus(bool enable) {
@@ -428,7 +429,7 @@ class _RequestMapListState extends State<RequestMapList> {
       });
       _refreshConfig(force: true);
 
-      if (mounted) FlutterToastr.show(localizations.deleteSuccess, context);
+      if (mounted) Toast.show(localizations.deleteSuccess, context);
     });
   }
 }
@@ -540,7 +541,7 @@ class _RequestMapEditState extends State<RequestMapEdit> {
               child: Text(localizations.save),
               onPressed: () async {
                 if (!(formKey.currentState as FormState).validate()) {
-                  FlutterToastr.show(localizations.cannotBeEmpty, context, position: FlutterToastr.center);
+                  Toast.show(localizations.cannotBeEmpty, context, position: Toast.center);
                   return;
                 }
 

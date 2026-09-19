@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:proxypin/native/vpn.dart';
@@ -6,6 +5,7 @@ import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/ui/launch/launch.dart';
 import 'package:proxypin/ui/mobile/mobile.dart';
 import 'package:proxypin/utils/lang.dart';
+import 'package:proxypin/utils/platform.dart';
 
 ///画中画
 class PictureInPicture {
@@ -18,10 +18,12 @@ class PictureInPicture {
         MobileApp.requestStateKey.currentState?.clean();
       } else if (call.method == 'exitPictureInPictureMode') {
         inPip = false;
-        Vpn.isRunning().then((value) {
-          Vpn.isVpnStarted = value;
-          SocketLaunch.startStatus.value = ValueWrap.of(value);
-        });
+        if (Platforms.supportVpn()) {
+          Vpn.isRunning().then((value) {
+            Vpn.isVpnStarted = value;
+            SocketLaunch.startStatus.value = ValueWrap.of(value);
+          });
+        }
       }
 
       return Future.value();
@@ -45,7 +47,7 @@ class PictureInPicture {
 
   ///发送数据
   static Future<bool> addData(String text) async {
-    if (Platform.isIOS && inPip) {
+    if (Platforms.isIOS() && inPip) {
       _channel.invokeMethod('addData', text.fixAutoLines());
     }
     return false;

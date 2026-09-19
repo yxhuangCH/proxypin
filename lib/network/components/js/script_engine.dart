@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter_js/flutter_js.dart';
 import 'package:proxypin/network/components/js/xhr.dart';
+import 'package:proxypin/utils/platform.dart';
 
 import '../../http/http.dart';
 import '../../http/http.dart' as http;
@@ -98,6 +99,11 @@ class JavaScriptEngine {
   }
 
   static Future<JavascriptRuntime> getJavaScript({Function(dynamic args)? consoleLog}) async {
+    // 鸿蒙 MVP 阶段 flutter_js 无 ohos 原生库，防御性拦截避免触发原生加载崩溃
+    if (!Platforms.supportScript()) {
+      throw SignalException('Script is not supported on this platform / 当前平台暂不支持脚本功能');
+    }
+
     final JavascriptRuntime flutterJs = getJavascriptRuntime(xhr: false);
 
     // register channel callback
@@ -127,7 +133,7 @@ class JavaScriptEngine {
     }
 
     var result = jsResult.rawResult;
-    if (Platform.isMacOS || Platform.isIOS) {
+    if (Platforms.isMacOS() || Platforms.isIOS()) {
       result = flutterJs.convertValue(jsResult);
     }
     if (result is String) {

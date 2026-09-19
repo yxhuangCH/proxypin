@@ -1,0 +1,24 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "ProxyPin 抓包工具"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "ProxyPin"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "ProxyPin"
+    },
+    {
+      "name": "internet_permission_reason",
+      "value": "用于代理服务绑定端口并转发网络请求"
+    },
+    {
+      "name": "wifi_permission_reason",
+      "value": "用于获取本机局域网 IP，便于其他设备连接代理"
+    }
+  ]
+}

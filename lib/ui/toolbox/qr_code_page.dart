@@ -15,17 +15,17 @@
  */
 
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:proxypin/ui/component/multi_window_compat.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:flutter_qr_reader_plus/flutter_qr_reader.dart';
-import 'package:flutter_toastr/flutter_toastr.dart';
+import 'package:proxypin/ui/component/toast.dart';
 import 'package:image_pickers/image_pickers.dart';
 import 'package:proxypin/ui/component/app_dialog.dart';
 import 'package:proxypin/ui/component/qrcode/qr_scan_view.dart';
@@ -148,32 +148,34 @@ class _QrDecodeState extends State<_QrDecode> with AutomaticKeepAliveClientMixin
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const SizedBox(width: 10),
-          FilledButton.icon(
-              onPressed: () async {
-                String? path = await selectImage();
-                if (path == null) return;
-                var result = await FlutterQrReader.imgScan(path);
-                if (result == null) {
-                  if (context.mounted) FlutterToastr.show(localizations.decodeFail, context, duration: 2);
-                  return;
-                }
-                decodeData.text = result;
-              },
-              icon: const Icon(Icons.photo, size: 18),
-              style: ButtonStyle(
-                  padding: WidgetStateProperty.all<EdgeInsets>(EdgeInsets.symmetric(horizontal: 15, vertical: 8)),
-                  shape: WidgetStateProperty.all<RoundedRectangleBorder>(
-                      RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))),
-              label: Text(localizations.selectImage)),
+          // 鸿蒙 MVP：flutter_qr_reader_plus 无 ohos 实现，隐藏图片识别与扫码入口
+          if (!Platforms.isOhos())
+            FilledButton.icon(
+                onPressed: () async {
+                  String? path = await selectImage();
+                  if (path == null) return;
+                  var result = await FlutterQrReader.imgScan(path);
+                  if (result == null) {
+                    if (context.mounted) Toast.show(localizations.decodeFail, context, duration: 2);
+                    return;
+                  }
+                  decodeData.text = result;
+                },
+                icon: const Icon(Icons.photo, size: 18),
+                style: ButtonStyle(
+                    padding: WidgetStateProperty.all<EdgeInsets>(EdgeInsets.symmetric(horizontal: 15, vertical: 8)),
+                    shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                        RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))),
+                label: Text(localizations.selectImage)),
           const SizedBox(width: 10),
-          if (Platforms.isMobile())
+          if (Platforms.isMobile() && !Platforms.isOhos())
             FilledButton.icon(
                 onPressed: () async {
                   var scanRes = await QrCodeScanner.scan(context);
                   if (scanRes == null) return;
 
                   if (scanRes == "-1") {
-                    if (context.mounted) FlutterToastr.show(localizations.invalidQRCode, context, duration: 2);
+                    if (context.mounted) Toast.show(localizations.invalidQRCode, context, duration: 2);
                     return;
                   }
                   decodeData.text = scanRes;
@@ -205,7 +207,7 @@ class _QrDecodeState extends State<_QrDecode> with AutomaticKeepAliveClientMixin
               onPressed: () {
                 if (decodeData.text.isEmpty) return;
                 Clipboard.setData(ClipboardData(text: decodeData.text));
-                FlutterToastr.show(localizations.copied, context);
+                Toast.show(localizations.copied, context);
               },
               label: Text(localizations.copy),
             ),
@@ -217,14 +219,14 @@ class _QrDecodeState extends State<_QrDecode> with AutomaticKeepAliveClientMixin
   //选择照片
   Future<String?> selectImage() async {
     if (Platforms.isMobile()) {
-      final file = await FilePicker.pickFile(type: FileType.image);
-      if (file == null) return null;
-      return file.path;
+      final result = await FilePickerUtil.pickFiles(type: FileType.image, allowMultiple: false);
+      if (result == null || result.files.isEmpty) return null;
+      return result.files.single.path;
     }
 
     if (Platforms.isDesktop()) {
       //<String>['jpg', 'png', 'jpeg']
-      FilePickerResult? result = await FilePicker.pickFiles(type: FileType.image);
+      FilePickerResult? result = await FilePickerUtil.pickFiles(type: FileType.image);
       if (result == null || result.files.isEmpty) return null;
       return result.files.single.path;
     }
@@ -340,19 +342,19 @@ class _QrEncodeState extends State<_QrEncode> with AutomaticKeepAliveClientMixin
       return;
     }
 
-    if (Platform.isIOS) {
+    if (Platforms.isIOS()) {
       var imageBytes = await toImageBytes();
       if (imageBytes == null) return;
       String? path = await ImagePickers.saveByteDataImageToGallery(imageBytes);
       if (path != null && mounted) {
-        FlutterToastr.show(localizations.saveSuccess, context, duration: 2, rootNavigator: true);
+        Toast.show(localizations.saveSuccess, context, duration: 2, rootNavigator: true);
       }
       return;
     }
     var imageBytes = await toImageBytes();
     if (imageBytes == null) return;
 
-    String? path = await FilePicker.saveFile(fileName: "qrcode.png", bytes: imageBytes, type: FileType.image);
+    String? path = await FilePickerUtil.saveFile(fileName: "qrcode.png", bytes: imageBytes, type: FileType.image);
     if (path == null) return;
     if (mounted) {
       CustomToast.success(localizations.saveSuccess).show(context);
