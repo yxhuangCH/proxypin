@@ -6,3 +6,8 @@ oh_modules/
 local.properties
 .idea/
 *.har
+.hvigor/
+entry/libs/
+entry/src/main/resources/rawfile/flutter_assets/
+entry/.preview/
+entry/build/
