@@ -23,6 +23,7 @@ import 'package:proxypin/network/bin/configuration.dart';
 import 'package:proxypin/network/channel/channel.dart';
 import 'package:proxypin/network/channel/channel_context.dart';
 import 'package:proxypin/network/channel/channel_dispatcher.dart';
+import 'package:proxypin/network/components/access_control.dart';
 import 'package:proxypin/network/components/host_filter.dart';
 import 'package:proxypin/network/handle/relay_handle.dart';
 import 'package:proxypin/network/socks/socks5.dart';
@@ -84,6 +85,12 @@ class Server extends Network {
   Future<ServerSocket> bind(int port) async {
     serverSocket = await ServerSocket.bind(InternetAddress.anyIPv4, port);
     serverSubscription = serverSocket.listen((socket) {
+      //访问控制：非白名单客户端直接拒绝
+      if (!AccessControl.isAllowed(socket.remoteAddress, configuration)) {
+        logger.w('拒绝非白名单客户端连接: ${socket.remoteAddress.host}:${socket.remotePort}');
+        socket.destroy();
+        return;
+      }
       var channel = Channel(socket);
       _connections.add(channel);
 

@@ -8,6 +8,7 @@ import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/configuration.dart';
 import 'package:proxypin/ui/mobile/setting/theme.dart';
+import 'package:proxypin/native/keep_alive.dart';
 import 'package:proxypin/utils/platform.dart';
 
 ///设置
@@ -29,6 +30,8 @@ class _PreferenceState extends State<Preference> {
 
   final memoryCleanupController = TextEditingController();
   final memoryCleanupList = [null, 512, 1024, 2048, 4096];
+
+  bool get _isCN => Localizations.localeOf(context) == const Locale.fromSubtags(languageCode: 'zh');
 
   @override
   void initState() {
@@ -106,6 +109,30 @@ class _PreferenceState extends State<Preference> {
                           appConfiguration.pipEnabled.value = value;
                           appConfiguration.flushConfig();
                         })),
+                Divider(height: 0, thickness: 0.3, color: dividerColor),
+              ],
+              // 鸿蒙后台保活：前台常亮 + 长时任务状态（详见 harmony/docs/06 §3）
+              if (Platforms.isOhos()) ...[
+                ListTile(
+                    title: Text(_isCN ? '前台常亮' : 'Keep screen on'),
+                    subtitle: Text(_isCN ? '抓包时保持屏幕点亮，降低熄屏后代理被系统挂起的概率' : 'Keep the screen on while capturing',
+                        style: const TextStyle(fontSize: 12)),
+                    trailing: SwitchWidget(
+                        value: appConfiguration.keepScreenOn,
+                        scale: 0.8,
+                        onChanged: (value) {
+                          appConfiguration.keepScreenOn = value;
+                          appConfiguration.flushConfig();
+                          KeepAliveService.setKeepScreenOn(value && proxyServer.isRunning);
+                        })),
+                Divider(height: 0, thickness: 0.3, color: dividerColor),
+                ListTile(
+                    title: Text(_isCN ? '后台保活' : 'Background keep-alive'),
+                    subtitle: Text(
+                        KeepAliveService.isRunning
+                            ? (_isCN ? '长时任务已开启；退后台仍可能被系统限制，建议保持前台' : 'Continuous task running; may still be restricted in background')
+                            : (_isCN ? '长时任务未开启，退后台/熄屏后代理可能中断' : 'Not enabled; proxy may be suspended in background'),
+                        style: const TextStyle(fontSize: 12))),
                 Divider(height: 0, thickness: 0.3, color: dividerColor),
               ],
               ListTile(

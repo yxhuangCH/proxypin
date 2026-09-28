@@ -85,6 +85,9 @@ class AppConfiguration {
   /// 底部导航栏
   bool bottomNavigation = true;
 
+  /// 鸿蒙：前台常亮（抓包时保持屏幕点亮，避免熄屏后代理被挂起）
+  bool keepScreenOn = false;
+
   /// 内存清理
   int? memoryCleanupThreshold;
 
@@ -210,6 +213,7 @@ class AppConfiguration {
       pipIcon.value = config['pipIcon'] ?? false;
       headerViewMode = config['headerViewMode'] ?? "table";
       bottomNavigation = config['bottomNavigation'] ?? true;
+      keepScreenOn = config['keepScreenOn'] ?? false;
       memoryCleanupThreshold = config['memoryCleanupThreshold'];
       autoReadEnabled = config['autoReadEnabled'] ?? true;
       clearConfirm = config['clearConfirm'] ?? false;
@@ -262,6 +266,7 @@ class AppConfiguration {
       if (Platforms.isMobile()) 'pipEnabled': pipEnabled.value,
       if (Platforms.isMobile()) 'pipIcon': pipIcon.value ? true : null,
       if (Platforms.isMobile()) 'bottomNavigation': bottomNavigation,
+      if (Platforms.isOhos()) 'keepScreenOn': keepScreenOn,
       if (Platforms.isDesktop())
         "windowSize": windowSize == null ? null : {"width": windowSize?.width, "height": windowSize?.height},
       if (Platforms.isDesktop())

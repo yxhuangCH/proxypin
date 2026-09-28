@@ -19,6 +19,10 @@
     {
       "name": "wifi_permission_reason",
       "value": "用于获取本机局域网 IP，便于其他设备连接代理"
+    },
+    {
+      "name": "keep_background_permission_reason",
+      "value": "用于开启长时任务，降低退后台后代理抓包服务被系统挂起中断的概率"
     }
   ]
 }

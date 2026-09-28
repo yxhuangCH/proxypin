@@ -1,8 +1,10 @@
 import 'dart:convert';
 
+import 'package:proxypin/network/bin/configuration.dart';
 import 'package:proxypin/network/bin/listener.dart';
 import 'package:proxypin/network/channel/channel.dart';
 import 'package:proxypin/network/channel/channel_context.dart';
+import 'package:proxypin/network/components/access_control.dart';
 import 'package:proxypin/network/components/host_filter.dart';
 import 'package:proxypin/network/components/interceptor.dart';
 import 'package:proxypin/network/components/manager/request_rewrite_manager.dart';
@@ -38,6 +40,21 @@ class HttpProxyChannelHandler extends ChannelHandler<HttpRequest> {
         msg.hostAndPort?.port == channel.socket.port) {
       ProxyHelper.localRequest(channelContext, msg, channel, listener: listener);
       return;
+    }
+
+    //代理鉴权（证书下载与本服务请求放行）
+    var config = await Configuration.instance;
+    if (config.proxyAuthEnabled) {
+      if (!AccessControl.checkAuth(msg, config)) {
+        logger.w('[${channel.id}] 代理鉴权失败: ${msg.method.name} ${msg.requestUrl}');
+        var response = HttpResponse(HttpStatus.newStatus(407, 'Proxy Authentication Required'),
+            protocolVersion: msg.protocolVersion);
+        response.headers.set('Proxy-Authenticate', 'Basic realm="ProxyPin"');
+        await channel.writeAndClose(channelContext, response);
+        return;
+      }
+      //鉴权通过后移除该头，避免透传给目标服务器
+      msg.headers.remove(HttpHeaders.PROXY_AUTHORIZATION);
     }
 
     //代理转发请求

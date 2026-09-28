@@ -21,6 +21,9 @@
         "startWindowIcon": "$media:app_icon",
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
+        "backgroundModes": [
+          "dataTransfer"
+        ],
         "skills": [
           {
             "entities": [
@@ -51,6 +54,13 @@
       {
         "name": "ohos.permission.GET_NETWORK_INFO",
         "reason": "$string:internet_permission_reason",
+        "usedScene": {
+          "when": "always"
+        }
+      },
+      {
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING",
+        "reason": "$string:keep_background_permission_reason",
         "usedScene": {
           "when": "always"
         }

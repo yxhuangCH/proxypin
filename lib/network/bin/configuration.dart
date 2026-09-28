@@ -63,6 +63,15 @@ class Configuration {
   //默认是否启动
   bool startup = false;
 
+  //访问控制：客户端 IP 白名单（仅白名单内地址可连接代理，回环地址始终放行）
+  bool accessControlEnabled = false;
+  List<String> ipWhitelist = [];
+
+  //代理鉴权（Proxy-Authorization Basic）
+  bool proxyAuthEnabled = false;
+  String proxyAuthUsername = '';
+  String proxyAuthPassword = '';
+
   Configuration._();
 
   /// 单例
@@ -98,6 +107,11 @@ class Configuration {
     appWhitelist = List<String>.from(config['appWhitelist'] ?? []);
     appWhitelistEnabled = config['appWhitelistEnabled'] ?? true;
     appBlacklist = config['appBlacklist'] == null ? null : List<String>.from(config['appBlacklist']);
+    accessControlEnabled = config['accessControlEnabled'] ?? false;
+    ipWhitelist = List<String>.from(config['ipWhitelist'] ?? []);
+    proxyAuthEnabled = config['proxyAuthEnabled'] ?? false;
+    proxyAuthUsername = config['proxyAuthUsername'] ?? '';
+    proxyAuthPassword = config['proxyAuthPassword'] ?? '';
     HostFilter.whitelist.load(config['whitelist']);
     HostFilter.blacklist.load(config['blacklist']);
   }
@@ -148,6 +162,11 @@ class Configuration {
       'appWhitelist': appWhitelist,
       'appWhitelistEnabled': appWhitelistEnabled,
       'appBlacklist': appBlacklist,
+      'accessControlEnabled': accessControlEnabled,
+      'ipWhitelist': ipWhitelist,
+      'proxyAuthEnabled': proxyAuthEnabled,
+      'proxyAuthUsername': proxyAuthUsername,
+      'proxyAuthPassword': proxyAuthPassword,
       'historyCacheTime': historyCacheTime,
       'enabledHttp2': enabledHttp2,
       'whitelist': HostFilter.whitelist.toJson(),

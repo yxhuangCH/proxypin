@@ -25,6 +25,7 @@ import 'package:proxypin/ui/component/multi_window.dart';
 import 'package:proxypin/ui/component/proxy_port_setting.dart';
 import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/desktop/setting/about.dart';
+import 'package:proxypin/ui/desktop/setting/access_control.dart';
 import 'package:proxypin/ui/desktop/setting/external_proxy.dart';
 import 'package:proxypin/ui/desktop/setting/hosts.dart';
 import 'package:proxypin/ui/desktop/setting/request_block.dart';
@@ -48,6 +49,8 @@ class _SettingState extends State<Setting> {
   late Configuration configuration;
 
   AppLocalizations get localizations => AppLocalizations.of(context)!;
+
+  bool get isCN => Localizations.localeOf(context) == const Locale.fromSubtags(languageCode: 'zh');
 
   @override
   void initState() {
@@ -83,6 +86,7 @@ class _SettingState extends State<Setting> {
         item(localizations.breakpoint, onPressed: requestBreakpoint),
         item(localizations.weakNetwork, onPressed: showWeakNetwork),
         item(localizations.externalProxy, onPressed: setExternalProxy),
+        item(isCN ? '访问控制' : 'Access Control', onPressed: showAccessControl),
         item(localizations.about, onPressed: showAbout),
       ],
     );
@@ -108,6 +112,15 @@ class _SettingState extends State<Setting> {
         context: context,
         builder: (context) {
           return ExternalProxyDialog(configuration: widget.proxyServer.configuration);
+        });
+  }
+
+  ///访问控制
+  void showAccessControl() {
+    showDialog(
+        context: context,
+        builder: (context) {
+          return AccessControlDialog(configuration: widget.proxyServer.configuration);
         });
   }
 
