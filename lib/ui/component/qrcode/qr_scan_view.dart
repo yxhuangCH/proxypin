@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:proxypin/utils/file_picker_util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:flutter_qr_reader_plus/flutter_qr_reader.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -10,10 +11,18 @@ import 'package:proxypin/utils/platform.dart';
 ///@Author: Hongen Wang
 /// qr code scanner
 class QrCodeScanner {
+  /// 鸿蒙扫码 channel：Scan Kit 系统级扫码界面（无需相机权限），见 ProxyPinScanPlugin.ets
+  static const MethodChannel _ohosScanChannel = MethodChannel('proxypin/scan');
+
   static Future<String?> scan(BuildContext context) async {
-    // 鸿蒙 MVP 不支持扫码（flutter_qr_reader_plus 无 ohos 实现），二期接入鸿蒙 Scan Kit
+    // 鸿蒙走系统级扫码界面；用户取消/失败返回 null
     if (Platforms.isOhos()) {
-      return null;
+      try {
+        return await _ohosScanChannel.invokeMethod<String>('scan');
+      } catch (e) {
+        logger.w('ohos scan failed: $e');
+        return null;
+      }
     }
 
     var status = await Permission.camera.status;

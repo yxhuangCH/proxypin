@@ -23,6 +23,7 @@ import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/native/vpn.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/util/logger.dart';
+import 'package:proxypin/native/keep_alive.dart';
 import 'package:proxypin/ui/desktop/ssl/pc_cert.dart';
 import 'package:proxypin/ui/configuration.dart';
 import 'package:proxypin/utils/lang.dart';
@@ -159,6 +160,7 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
 
   Future<void> appExit() async {
     logger.d("appExit");
+    _stopOhosKeepAlive();
     await widget.proxyServer.stop();
     started = false;
     if (Platforms.isDesktop()) {
@@ -196,6 +198,8 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
         widget.proxyServer.retryBind().catchError((e) {
           logger.e('retryBind failed on resumed', error: e);
         });
+        // 回到前台后重新拉起保活（长时任务可能在后台被系统回收）
+        _applyOhosKeepAlive();
       }
 
       if (Platforms.supportVpn() && started == false) {
@@ -208,10 +212,33 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
 
     if (state == AppLifecycleState.detached) {
       logger.d('AppLifecycleState.detached');
+      _stopOhosKeepAlive();
       widget.onStop?.call();
       widget.proxyServer.stop();
       started = false;
     }
+  }
+
+  /// 鸿蒙：代理运行期间申请长时任务保活，并应用"前台常亮"设置；
+  /// 长时任务被系统拒绝时静默降级（详见 harmony/docs/06 §3.4 产品定位话术）
+  Future<void> _applyOhosKeepAlive() async {
+    if (!Platforms.isOhos() || !widget.proxyServer.isRunning) {
+      return;
+    }
+    var keepAlive = await KeepAliveService.start();
+    if (!keepAlive) {
+      logger.w('continuous task unavailable, fallback to foreground-only mode');
+    }
+    await KeepAliveService.setKeepScreenOn(AppConfiguration.current?.keepScreenOn ?? false);
+  }
+
+  /// 鸿蒙：停止代理时释放长时任务与常亮
+  void _stopOhosKeepAlive() {
+    if (!Platforms.isOhos()) {
+      return;
+    }
+    KeepAliveService.stop();
+    KeepAliveService.setKeepScreenOn(false);
   }
 
   @override
@@ -232,6 +259,7 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
             }
 
             widget.proxyServer.stop().then((value) {
+              _stopOhosKeepAlive();
               widget.onStop?.call();
               if (mounted) {
                 setState(() {
@@ -270,6 +298,7 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
             started = true;
           });
         }
+        _applyOhosKeepAlive();
         widget.onStart?.call();
       }).catchError((e) {
         logger.e("启动代理服务器失败", error: e);

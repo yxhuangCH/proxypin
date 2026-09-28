@@ -16,7 +16,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -47,6 +46,7 @@ import 'package:proxypin/ui/mobile/menu/menu.dart';
 import 'package:proxypin/ui/mobile/request/history.dart';
 import 'package:proxypin/ui/mobile/request/list.dart';
 import 'package:proxypin/ui/mobile/request/search.dart';
+import 'package:proxypin/ui/mobile/widgets/ohos_guide.dart';
 import 'package:proxypin/ui/mobile/widgets/pip.dart';
 import 'package:proxypin/ui/mobile/widgets/remote_device.dart';
 import 'package:proxypin/utils/ip.dart';
@@ -442,6 +442,8 @@ class RequestPageState extends State<RequestPage> {
             valueListenable: remoteDevice,
             builder: (context, value, _) {
               return Column(children: [
+                // 鸿蒙首页引导：代理地址 + 教程 + 访问控制安全提示
+                if (Platforms.isOhos()) OhosGuideCard(proxyServer: proxyServer),
                 value.connect ? remoteConnect(value) : const SizedBox(),
                 Expanded(
                     child: RequestListWidget(

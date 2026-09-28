@@ -29,6 +29,7 @@ import 'package:proxypin/ui/mobile/menu/drawer.dart';
 import 'package:proxypin/ui/mobile/menu/weak_network_tile.dart';
 import 'package:proxypin/ui/mobile/setting/environment.dart';
 import 'package:proxypin/ui/mobile/setting/hosts.dart';
+import 'package:proxypin/ui/mobile/setting/access_control.dart';
 import 'package:proxypin/ui/mobile/setting/preference.dart';
 import 'package:proxypin/ui/mobile/mobile.dart';
 import 'package:proxypin/ui/mobile/request/favorite.dart';
@@ -296,6 +297,12 @@ class SettingPage extends StatelessWidget {
                           context: context,
                           builder: (_) => ExternalProxyDialog(configuration: proxyServer.configuration));
                     }),
+                Divider(height: 0, thickness: 0.3, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
+                ListTile(
+                    title: Text(isCN ? '访问控制' : 'Access Control'),
+                    trailing: const Icon(Icons.keyboard_arrow_right),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => AccessControlPage(configuration: proxyServer.configuration)))),
                 Divider(height: 0, thickness: 0.3, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
 
                 Padding(

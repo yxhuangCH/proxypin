@@ -168,7 +168,8 @@ class _QrDecodeState extends State<_QrDecode> with AutomaticKeepAliveClientMixin
                         RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))),
                 label: Text(localizations.selectImage)),
           const SizedBox(width: 10),
-          if (Platforms.isMobile() && !Platforms.isOhos())
+          // 鸿蒙：扫码走 Scan Kit 系统级界面（QrCodeScanner.scan 内平台分支）；imgScan 无 ohos 实现仍隐藏
+          if (Platforms.isMobile())
             FilledButton.icon(
                 onPressed: () async {
                   var scanRes = await QrCodeScanner.scan(context);
