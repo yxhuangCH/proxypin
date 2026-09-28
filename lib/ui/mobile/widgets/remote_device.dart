@@ -126,16 +126,18 @@ class _RemoteDevicePageState extends State<RemoteDevicePage> {
             icon: const Icon(Icons.add_outlined),
             itemBuilder: (BuildContext context) {
               return <PopupMenuEntry>[
-                CustomPopupMenuItem(
-                    height: 32,
-                    child: ListTile(
-                        leading: const Icon(Icons.qr_code_scanner_outlined),
-                        dense: true,
-                        title: Text(localizations.scanCode),
-                        onTap: () {
-                          Navigator.maybePop(context);
-                          connectRemote();
-                        })),
+                // 鸿蒙 MVP 隐藏扫码入口（无相机扫码插件），保留手动输入地址
+                if (!Platforms.isOhos())
+                  CustomPopupMenuItem(
+                      height: 32,
+                      child: ListTile(
+                          leading: const Icon(Icons.qr_code_scanner_outlined),
+                          dense: true,
+                          title: Text(localizations.scanCode),
+                          onTap: () {
+                            Navigator.maybePop(context);
+                            connectRemote();
+                          })),
                 CustomPopupMenuItem(
                     height: 32,
                     child: ListTile(

@@ -76,7 +76,19 @@
       "Bash(echo \"probe: $\\(curl -s -x http://192.168.3.188:9099 -m 8 -o /dev/null -w '%{http_code}' http://proxy.pin/ssl\\)\")",
       "Bash(./gradlew assembleDebug --stacktrace)",
       "Bash(./gradlew :app:compileDebugKotlin :app:compileFlutterBuildDebug)",
-      "Bash(echo \"fg probe: $\\(curl -s -x http://192.168.3.188:9099 -m 8 -o /dev/null -w '%{http_code}' http://proxy.pin/ssl\\)\")"
+      "Bash(echo \"fg probe: $\\(curl -s -x http://192.168.3.188:9099 -m 8 -o /dev/null -w '%{http_code}' http://proxy.pin/ssl\\)\")",
+      "Bash(grep:*)",
+      "Bash(sed -n '10,35p' lib/ui/component/qrcode/qr_scan_view.dart)",
+      "Bash(sed -n '5,20p' lib/ui/mobile/setting/preference.dart)",
+      "Bash(sed -n '160,185p' lib/ui/toolbox/qr_code_page.dart)",
+      "Bash(sed -n '1,25p' lib/ui/mobile/setting/preference.dart)",
+      "Bash(sed -n '1,70p' lib/utils/share.dart)",
+      "Bash(sed -n '1,30p' ohos/entry/src/main/ets/entryability/EntryAbility.ets)",
+      "Bash(sed -n '15,35p' ohos/entry/src/main/module.json5)",
+      "Bash(sed -n '55,80p' ohos/entry/src/main/module.json5)",
+      "Bash(sed -n '15,35p' ohos/entry/src/main/resources/base/element/string.json)",
+      "Bash(git add:*)",
+      "Bash(echo \"conflicts-left=$?\")"
     ]
   }
 }
