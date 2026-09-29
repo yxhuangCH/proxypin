@@ -36,6 +36,13 @@
         ]
       }
     ],
+    "extensionAbilities": [
+      {
+        "name": "ProxyPinVpnAbility",
+        "srcEntry": "./ets/vpnability/ProxyPinVpnAbility.ets",
+        "type": "vpn"
+      }
+    ],
     "requestPermissions": [
       {
         "name": "ohos.permission.INTERNET",

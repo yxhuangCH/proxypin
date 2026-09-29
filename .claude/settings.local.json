@@ -108,7 +108,14 @@
       "Bash(ls:*)",
       "Bash(/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw --mode module -p product=default -p buildMode=release assembleHap --no-daemon)",
       "Bash(md5 /Users/yxhuang/ai_project/proxypin/ohos/oh_modules/.ohpm/@ohos+flutter_ohos@fyhiuqtj7cd11uizcm0jmqje+d3axpyo7pz9p9ovwtm=/oh_modules/@ohos/flutter_ohos/src/main/ets/plugin/editing/OhosAutoFillHelper.ets)",
-      "Bash(md5 harmony/patches/OhosAutoFillHelper.ets)"
+      "Bash(md5 harmony/patches/OhosAutoFillHelper.ets)",
+      "Bash(awk -F: '{print $1\": \"$2}')",
+      "Bash(sort -n -t: -k1)",
+      "Bash(uniq -c -f1)",
+      "Bash(wc:*)",
+      "Bash(awk '$2 >= \"19:13:10\"')",
+      "Bash(pkill -f \"http.server 8888\")",
+      "Bash(rm -f /tmp/config_new.cnf /tmp/poc_layout*.json /tmp/poc*.jpeg /tmp/vpn_poc_hilog.txt)"
     ]
   }
 }

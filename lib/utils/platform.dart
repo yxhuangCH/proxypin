@@ -32,9 +32,10 @@ class Platforms {
     return Platform.isAndroid || Platform.isIOS || isOhos();
   }
 
-  /// 是否支持 VPN 抓包（仅 Android/iOS）
+  /// 是否支持 VPN 抓包（Android/iOS/ohos）
+  /// ohos：路线 A VpnExtensionAbility（harmony/docs/09），FAB 为 VPN 开关、代理服务常驻双模式
   static bool supportVpn() {
-    return Platform.isAndroid || Platform.isIOS;
+    return Platform.isAndroid || Platform.isIOS || isOhos();
   }
 
   /// 是否支持系统代理设置（仅桌面端）
