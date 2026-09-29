@@ -90,6 +90,7 @@
       "Bash(git add:*)",
       "Bash(echo \"conflicts-left=$?\")",
       "Bash(git commit:*)"
+      "Bash(echo \"conflicts-left=$?\")"
     ]
   }
 }
