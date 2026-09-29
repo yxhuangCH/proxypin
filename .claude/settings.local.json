@@ -89,8 +89,26 @@
       "Bash(sed -n '15,35p' ohos/entry/src/main/resources/base/element/string.json)",
       "Bash(git add:*)",
       "Bash(echo \"conflicts-left=$?\")",
-      "Bash(git commit:*)"
-      "Bash(echo \"conflicts-left=$?\")"
+      "Bash(git commit:*)",
+      "Bash(unzip -l /Users/yxhuang/code/harmony/hmspushdemo/entry/build/default/outputs/default/entry-default-signed.hap)",
+      "Bash(unzip -o -q /Users/yxhuang/code/harmony/hmspushdemo/entry/build/default/outputs/default/entry-default-signed.hap module.json pack.info -d hmspushdemo_hap)",
+      "Read(//Users/yxhuang/code/harmony/hmspushdemo/AppScope/**)",
+      "Read(//Users/yxhuang/code/harmony/hmspushdemo/entry/src/main/**)",
+      "Bash(openssl cms:*)",
+      "Bash(openssl pkcs7:*)",
+      "Bash(awk '/^        [0-9a-f]{4} - /{printf \"%s\", $0} /^        [0-9a-f]{4} - / && /^$/')",
+      "Bash(openssl smime:*)",
+      "Read(//tmp/**)",
+      "Bash(ls -la /Users/yxhuang/code/harmony/hmspushdemo/entry/build/default/outputs/default/*.hap)",
+      "WebSearch",
+      "WebFetch(domain:developer.huawei.com)",
+      "Bash(ls -d /Users/yxhuang/ai_project/proxypin/ohos/oh_modules/.ohpm/@ohos+flutter_ohos*)",
+      "Read(//Users/yxhuang/dev/flutter_ohos/bin/cache/artifacts/engine/**)",
+      "Read(//private/tmp/harcheck/package/src/main/ets/plugin/editing/**)",
+      "Bash(ls:*)",
+      "Bash(/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw --mode module -p product=default -p buildMode=release assembleHap --no-daemon)",
+      "Bash(md5 /Users/yxhuang/ai_project/proxypin/ohos/oh_modules/.ohpm/@ohos+flutter_ohos@fyhiuqtj7cd11uizcm0jmqje+d3axpyo7pz9p9ovwtm=/oh_modules/@ohos/flutter_ohos/src/main/ets/plugin/editing/OhosAutoFillHelper.ets)",
+      "Bash(md5 harmony/patches/OhosAutoFillHelper.ets)"
     ]
   }
 }

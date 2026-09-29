@@ -642,8 +642,8 @@ class _OhosCaGuideState extends State<OhosCaGuide> {
               : '1. Connect the debugged device to the same LAN, set Wi-Fi proxy to $ip:$port'),
           const SizedBox(height: 10),
           SelectableText(isCN
-              ? '2. 被调试设备浏览器访问 http://proxy.pin/ssl 下载 CA 证书'
-              : '2. Open http://proxy.pin/ssl in the browser of the debugged device to download the CA'),
+              ? '2. 被调试设备浏览器访问 http://proxy.pin/ssl 下载 CA 证书\n（proxy.pin 是代理拦截地址，仅在已配置代理的设备上有效，本机浏览器访问不通）'
+              : '2. Open http://proxy.pin/ssl in the browser of the debugged device to download the CA\n(proxy.pin only works on devices with the proxy configured, not on this device)'),
           const SizedBox(height: 10),
           SelectableText(isCN
               ? '3. 安装并信任该 CA 证书（Android/iOS/Windows/macOS 各自安装方式）'
@@ -654,6 +654,20 @@ class _OhosCaGuideState extends State<OhosCaGuide> {
               label: Text('http://proxy.pin/ssl'),
               onPressed: () {
                 Clipboard.setData(const ClipboardData(text: 'http://proxy.pin/ssl'));
+                Toast.show(localizations.copied, context);
+              }),
+          const SizedBox(height: 16),
+          Divider(height: 0, color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
+          const SizedBox(height: 12),
+          SelectableText(isCN
+              ? '如需在本机下载 CA 证书（一般不需要），本机浏览器直接访问：http://127.0.0.1:$port/ssl'
+              : 'To download the CA on this device (usually unnecessary), open http://127.0.0.1:$port/ssl in the local browser'),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+              icon: const Icon(Icons.copy, size: 16),
+              label: Text('http://127.0.0.1:$port/ssl'),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: 'http://127.0.0.1:$port/ssl'));
                 Toast.show(localizations.copied, context);
               }),
         ]));

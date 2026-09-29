@@ -96,8 +96,8 @@ class _OhosGuideCardState extends State<OhosGuideCard> {
                   _step(isCN ? '① 被调试设备与本机连接同一 WiFi' : '1. Connect the debugged device to the same WiFi'),
                   _step(isCN ? '② 在其 WiFi 代理设置中填写上方地址' : '2. Fill the address above in its WiFi proxy settings'),
                   _step(isCN
-                      ? '③ 配好代理后浏览器访问 http://proxy.pin/ssl 下载并安装 CA 证书（HTTPS 抓包需要）'
-                      : '3. With proxy set, visit http://proxy.pin/ssl in browser to download and install the CA certificate (required for HTTPS)'),
+                      ? '③ 配好代理后在被调试设备浏览器访问 http://proxy.pin/ssl 下载并安装 CA 证书（HTTPS 抓包需要）'
+                      : '3. With proxy set, visit http://proxy.pin/ssl in the debugged device browser to download and install the CA certificate (required for HTTPS)'),
                 ])),
             Padding(
                 padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
@@ -187,13 +187,15 @@ class _OhosGuideCardState extends State<OhosGuideCard> {
             ? 'HTTPS 抓包需要在被调试设备上安装 ProxyPin CA 证书：\n\n'
                 '1. 先在被调试设备上配好代理（见代理配置教程）；\n'
                 '2. 在被调试设备浏览器访问：http://proxy.pin/ssl\n'
+                '   （proxy.pin 由代理拦截应答，仅对已配代理的设备有效；本机浏览器请访问 http://127.0.0.1:${widget.proxyServer.port}/ssl）\n'
                 '3. 下载 CA 证书并安装：\n'
                 '   HarmonyOS：设置 → 安全 → 更多安全设置 → 加密和凭据 → 从存储设备安装；\n'
                 '   Android：设置 → 安全 → 加密与凭据 → 安装证书 → CA 证书。\n\n'
                 '注意：部分应用校验证书（SSL Pinning），需配合脚本或 Frida 绕过。'
             : 'HTTPS capture requires installing the ProxyPin CA on the debugged device:\n\n'
                 '1. Set up the proxy first (see proxy setup guide);\n'
-                '2. Visit http://proxy.pin/ssl in the device browser;\n'
+                '2. Visit http://proxy.pin/ssl in the debugged device browser\n'
+                '   (proxy.pin only works through the proxy; on this device use http://127.0.0.1:${widget.proxyServer.port}/ssl);\n'
                 '3. Download and install the CA certificate in system settings.');
   }
 
