@@ -63,7 +63,7 @@ class MoreMenu extends StatelessWidget {
                 child: ListTile(
                     dense: true,
                     title: Text(localizations.appWhitelist),
-                    leading: const Icon(Icons.android_rounded),
+                    leading: Icon(Platforms.isOhos() ? Icons.phone_android : Icons.android_rounded),
                     onTap: () {
                       navigator(context, AppWhitelist(proxyServer: proxyServer));
                     })),

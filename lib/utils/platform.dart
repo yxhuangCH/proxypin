@@ -32,9 +32,10 @@ class Platforms {
     return Platform.isAndroid || Platform.isIOS || isOhos();
   }
 
-  /// 是否支持 VPN 抓包（仅 Android/iOS）
+  /// 是否支持 VPN 抓包（Android/iOS/ohos）
+  /// ohos：路线 A VpnExtensionAbility（harmony/docs/09），FAB 为 VPN 开关、代理服务常驻双模式
   static bool supportVpn() {
-    return Platform.isAndroid || Platform.isIOS;
+    return Platform.isAndroid || Platform.isIOS || isOhos();
   }
 
   /// 是否支持系统代理设置（仅桌面端）
@@ -47,8 +48,16 @@ class Platforms {
     return Platform.isWindows || Platform.isMacOS;
   }
 
-  /// 是否支持应用级过滤（仅 Android VPN）
+  /// 是否支持应用级过滤（Android VPN / ohos VpnExtensionAbility）
+  /// ohos 的白名单由系统 `trustedApplications`/`blockedApplications` 承载
+  /// （harmony/docs/09 第 2 期），语义与 Android `addAllowedApplication` 一致
   static bool supportAppFilter() {
+    return Platform.isAndroid || isOhos();
+  }
+
+  /// 是否能枚举已安装应用（仅 Android）
+  /// iOS 需 entitlement，ohos 三方应用需企业权限——两者都降级为手动输入包名
+  static bool supportInstalledApps() {
     return Platform.isAndroid;
   }
 

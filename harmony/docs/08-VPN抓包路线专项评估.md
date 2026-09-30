@@ -2,6 +2,10 @@
 
 > 依据：华为官方文档《连接VPN - Network Kit》（developer.huawei.com/consumer/cn/doc/harmonyos-guides/net-vpnextension）
 > 结论先行：**技术上完整可行，权限从"不可能"降级为"高门槛可申请"。建议作为与路线 B 并行的专项预研，不进入一期主线。**
+>
+> ⚠️ **本文第 1、2 节有两处结论已被真机实施修正（2026-09-30）**，落地经过与实测结论见 [09-应用白名单与VPN路线实施.md](09-应用白名单与VPN路线实施.md)：
+> - 第 1 节 `"type": "vpn.extension"` **有误**，正确值是 `"type": "vpn"`（09 §2）；
+> - 第 2 节「需 `ohos.permission.MANAGE_VPN`」**不成立**：三方 VPN 只需 normal 级的 `ohos.permission.INTERNET`，MANAGE_VPN 是系统接口权限。门槛因此大幅低于本文评估（09 §2）。
 
 ## 1. 官方能力概述
 

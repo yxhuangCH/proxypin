@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:proxypin/utils/platform.dart';
 
 class InstalledApps {
   static const MethodChannel _methodChannel = MethodChannel('com.proxy/installedApps');
@@ -8,6 +9,11 @@ class InstalledApps {
     String? packageNamePrefix,
     bool includeSystemApps = false,
   }) {
+    // 鸿蒙无枚举能力（需企业权限），且 UI 已改用 OhosAppPickerWidget，不会走到这里；
+    // 兜底返回空列表，避免 channel 缺失抛 MissingPluginException
+    if (!Platforms.supportInstalledApps()) {
+      return Future.value(const []);
+    }
     return _methodChannel.invokeListMethod<Map>('getInstalledApps', {
       "withIcon": withIcon,
       "packageNamePrefix": packageNamePrefix,
