@@ -48,8 +48,16 @@ class Platforms {
     return Platform.isWindows || Platform.isMacOS;
   }
 
-  /// 是否支持应用级过滤（仅 Android VPN）
+  /// 是否支持应用级过滤（Android VPN / ohos VpnExtensionAbility）
+  /// ohos 的白名单由系统 `trustedApplications`/`blockedApplications` 承载
+  /// （harmony/docs/09 第 2 期），语义与 Android `addAllowedApplication` 一致
   static bool supportAppFilter() {
+    return Platform.isAndroid || isOhos();
+  }
+
+  /// 是否能枚举已安装应用（仅 Android）
+  /// iOS 需 entitlement，ohos 三方应用需企业权限——两者都降级为手动输入包名
+  static bool supportInstalledApps() {
     return Platform.isAndroid;
   }
 

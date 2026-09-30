@@ -35,11 +35,13 @@ Android 版 ProxyPin 的「应用白名单」：只代理白名单内 App 的流
 
 ## 3. 分期总览
 
-| 期 | 内容 | 工作量 | 一票否决点 |
+| 期 | 内容 | 工作量 | 状态 |
 |---|---|---|---|
-| 第 0 期 | PoC：tun fd 可读写 + trustedApplications 生效 | 2-3 天 | ✅ 失败则不进入第 1 期 |
-| 第 1 期 | 隧道栈全量移植（C++ NDK，约 2500-3000 行） | 2-3 周 | — |
-| 第 2 期 | 白名单 UI 接入 + Dart 门禁放开 | 3-5 天 | — |
+| 第 0 期 | PoC：tun fd 可读写 + trustedApplications 生效 | 2-3 天 | ✅ 2026-09-29 真机通过 |
+| 第 1 期 | 隧道栈全量移植（C++ NDK，约 2500-3000 行） | 2-3 周 | ✅ 2026-09-30 真机通过（§5） |
+| 第 2 期 | 白名单 UI 接入 + Dart 门禁放开 | 3-5 天 | ✅ 2026-09-30 真机通过（§6） |
+
+三期已全部完成，功能在 `feature/ohos-vpn-poc` 分支上落地；尚未合并 main，也未发布到 AppGallery（见 R2）。
 
 ## 4. 第 0 期：PoC —— 验证三个致命假设
 
@@ -163,29 +165,44 @@ getRemoteByPort(localPort: number): {remoteHost: string, remotePort: number} | n
 
 | 文件 | 改动 |
 |---|---|
-| `lib/utils/platform.dart` | `supportAppFilter()`（:51）加 ohos（`supportVpn()` 第 0 期已放开）；新增 `supportInstalledApps()`（仅 Android true）供 UI 降级判断 |
+| `lib/utils/platform.dart` | `supportAppFilter()` 加 ohos（`supportVpn()` 第 0 期已放开）；新增 `supportInstalledApps()`（仅 Android true）供 UI 降级判断 |
 | `lib/native/vpn.dart` | **不改**。channel 名与参数协议原样复用；ohos 插件忽略 `proxyPassDomains` |
-| `lib/native/installed_apps.dart` | ohos 时 `getInstalledApps` 返回空 / `getAppInfo` 抛异常走既有 catchError 兜底（app_filter.dart:57-60 已能渲染"未知应用"） |
+| `lib/native/installed_apps.dart` | `getInstalledApps` 在 `!supportInstalledApps()` 时提前返回 `Future.value(const [])`，避免 channel 缺失抛 `MissingPluginException`（UI 已改用 `OhosAppPickerWidget`，走不到这里，属兜底） |
 | `lib/native/process_info.dart` | `getRemoteAddressByPort` 放开 ohos |
 | `lib/network/channel/channel_dispatcher.dart:218` | `_fixAndroidVpnPort` 条件改为 `!(isAndroid() \|\| isOhos())` |
 | `lib/ui/mobile/mobile.dart:297` | ~~PiP 必须排除 ohos~~ **核实后无需改动**：:301 已有 `!Platforms.isAndroid() \|\| !pipEnabled` 保护，ohos 不会触碰 `com.proxy/pictureInPicture` channel。:335 的 `Vpn.isRunning()` 恢复逻辑 ohos 可用，保留。:465-493 FAB 逻辑无需改动 |
 | `lib/ui/launch/launch.dart:287-293` | **VPN 模式保活补齐（已实现）**：`_applyOhosKeepAlive()` 原先只在 `serverLaunch` 分支调用；VPN 模式下 FAB 走 `serverLaunch=false` 分支，首次启动不申请长时任务，仅靠 resumed 回调补。已在 `start()` 的 `serverLaunch=false` 分支补调（字段命中 P2 息屏约 1 分钟断 VPN） |
 | `lib/ui/mobile/widgets/remote_device.dart:266-268` | 远程设备 ipProxy 流程调 `Vpn.startVpn(remoteHost, ...)`——隧道栈天然支持，不改；验证阶段覆盖 |
-| `lib/ui/mobile/menu/drawer.dart:399`、`menu.dart:60` | 无需改动，`supportAppFilter()` 放开后入口自动出现 |
+| `lib/ui/mobile/menu/drawer.dart:399`、`menu.dart:60` | 无需改动，`supportAppFilter()` 放开后入口自动出现；`menu.dart` 仅把图标按平台切成 `phone_android` |
 
 ### 白名单 UI 降级（`lib/ui/mobile/setting/app_filter.dart`）
 
 鸿蒙无法枚举已安装应用，降级方案：
 
-1. **新增 ohos 应用选择页**：ohos 时 "+" 按钮不再 push `InstalledAppsWidget`，改推新页面：顶部手动输入框（bundleName 格式校验 `^[a-zA-Z][\w.]*$`，至少两段）；下方「常见应用」预置清单（纯 Dart 常量，20-30 个常见 HarmonyOS NEXT 包名，放 `lib/ui/mobile/setting/ohos_preset_apps.dart`）。返回值协议与 `InstalledAppsWidget` 一致（`Navigator.pop(packageName)`），AppWhitelist/AppBlacklist 主体逻辑零改动；
-2. **互斥提示**：鸿蒙 trusted/blocked 物理互斥（现有 vpn.dart:15-20 语义天然兼容）。ohos 且另一端名单非空时，页面顶部加 MaterialBanner：「鸿蒙系统限制：白名单与黑名单互斥，白名单非空时黑名单不生效」（黑名单页对称）。不新增配置字段，不改 Android 行为；
-3. **数量上限**：添加第 257 个时 SnackBar 拒绝（鸿蒙上限 256）。
+1. **新增 ohos 应用选择页**（`ohos_app_picker.dart`）：ohos 时 "+" 按钮不再 push `InstalledAppsWidget`，改推 `OhosAppPickerWidget`：顶部手动输入框（bundleName 格式校验 `^[a-zA-Z][\w]*(\.[a-zA-Z][\w]*)+$`，即至少两段）+ 搜索框；下方「常见应用」预置清单（纯 Dart 常量，`ohos_preset_apps.dart`，28 个常用 HarmonyOS NEXT 包名，含真机 `bm dump -a` 实测确认的 22 个）。返回值协议与 `InstalledAppsWidget` 一致（`Navigator.pop(packageName)`），AppWhitelist/AppBlacklist 主体逻辑零改动；
+2. **互斥提示**：鸿蒙 trusted/blocked 物理互斥（现有 vpn.dart:15-20 语义天然兼容）。ohos 且另一端名单非空时，页面顶部加 MaterialBanner（`buildMutualExclusionBanner`，可「知道了」关闭）。不新增配置字段，不改 Android 行为；
+3. **数量上限**：`ohosAppListLimit = 256`，添加到第 257 个时 SnackBar 拒绝；
+4. **顺带修正的既有 bug**：`_loadApps()` 原先在 `initState` 里调用，而它第一步就读 `Localizations`，此时依赖尚未建立，异常被 async 函数吞掉后 `isLoading` 永远为 true（真机表现为页面一直转圈）。已改到 `didChangeDependencies` + `_loaded` 幂等守卫。Android 同样受益。
 
-### 验收标准
+### 验收标准（2026-09-30 真机通过）
 
-- [ ] 鸿蒙 drawer 过滤器页出现白名单/黑名单入口，可手动输入/从预置清单添加
-- [ ] 配置后 VPN 重启生效；互斥提示正确显示
-- [ ] 五平台构建全绿；Android 白名单抓包回归无变化
+- [x] 鸿蒙过滤器页出现白名单/黑名单入口：drawer（`bottomNavigation=false` 时）→「代理过滤」页 → 应用白名单/应用黑名单两项均在；`bottomNavigation=true`（默认）时抽屉不存在，白名单入口在首页 ⋮ 菜单（黑名单入口见下方 F2）
+- [x] 从预置清单添加：选择器列出常见应用并**排除本页已添加项**，点选后回落到名单，显示预置中文名（`浏览器 Browser / com.huawei.hmos.browser`）
+- [x] 手动输入校验：输入 `ABC` → 输入框红框 + `包名格式不正确，示例：com.example.app`
+- [x] 非预置包名显示回落：`com.example.test` 显示名 = 包名本身（`ohosPresetAppName` 返回 null 的回落分支）
+- [x] 互斥提示：白名单页（黑名单 2 项）与黑名单页（白名单 2 项）对称显示 banner，文案带对方条目数与后果，「知道了」可关闭
+- [x] 落盘：UI 添加后返回上一页（触发 `dispose`）→ `config.cnf` 中 `appBlacklist` 已含新条目
+- [x] 构建回归：`flutter analyze` 0 error（230 条历史 info 级问题，与改动前一致）；`flutter build hap --release` ✅（并已 `hdc install` 到真机冒烟：白名单页正常渲染）、`flutter build macos --debug` ✅、`flutter build ios --debug --no-codesign` ✅（首次失败于 `zstandard_ios` pod 的 `Sync zstd`/`Remove synced zstd` 两个 script phase 竞态，重跑即过，与本期改动无关）；`flutter build apk` 卡在 `:app:packageDebug`（`SigningConfig "release" is missing required property "storeFile"`——本机缺 `android/key.properties`，属既有环境问题，Dart/Kotlin 编译阶段均已通过）
+- [~] Android 白名单回归：**未真机跑**（本机无 Android 设备，且 APK 打包缺 `android/key.properties`）。代码层面逐处核对：改动全部落在 `Platforms.isOhos()` 运行时分支或新增 ohos 专用文件内，Android 分支的执行路径与改动前逐行一致（`app_filter.dart` 的 3 处 ohos 分支、`installed_apps.dart` 的提前返回守卫在 Android 上恒为 false、`menu.dart` 仅图标取值按平台切换）。合并主线前建议在 Android 真机上补一次白名单抓包回归
+
+### 第 2 期真机实测发现
+
+| # | 现象 | 影响与处置 |
+|---|---|---|
+| F1 | 真机默认拼音 IME 下，`uitest uiInput inputText` 输入的 ASCII 停留在 composing 态（控件收不到文本），候选词还会把 `.` 吃成空格 | 脚本无法输入 bundleName，故「合法包名」路径改用配置回放验证（结果同上）。用户手输不受影响（切换英文键盘即可）。已记入工具链笔记 |
+| F2 | `应用黑名单` 的 UI 入口只在抽屉里，而抽屉仅在 `bottomNavigation=false` 时存在；默认 `bottomNavigation=true` 时黑名单无入口 | **既有产品行为，非本期引入**（Android 同样如此）。鸿蒙上白名单才是主场景，暂不处理；如需补齐，可在白名单页 AppBar 加跳到黑名单的入口 |
+| F3 | 选择器的已添加过滤按**本页**作用域（白名单页的选择器不排除只在黑名单里的应用） | 与 Android `InstalledAppsWidget` 行为一致，不改 |
+| F4 | 页面 `dispose` 才 `flushConfig`；`aa force-stop` 会跳过 dispose，此时 UI 上的改动不落盘 | 既有设计，非本期引入；脚本化验证时注意先进后退再读 `config.cnf` |
 
 ## 7. 风险清单
 
@@ -223,6 +240,6 @@ getRemoteByPort(localPort: number): {remoteHost: string, remotePort: number} | n
 4. 插件补全 restartVpn/isRunning，真机端到端验收
 
 **第 2 期**：
-1. platform.dart 门禁 + channel_dispatcher/mobile.dart(PiP) + installed_apps 降级
+1. ~~platform.dart 门禁 + channel_dispatcher/mobile.dart(PiP) + installed_apps 降级~~ → 其中 mobile.dart 核实后无需改动（见 §6 表）
 2. ohos_preset_apps.dart + 应用选择页 + 互斥提示/上限
-3. 五平台构建回归 + Android 真机回归
+3. 构建回归（ohos/macOS/iOS 已过，Android 受本机环境所限未跑，见 §6 验收）+ Android 真机回归（**待补**）
