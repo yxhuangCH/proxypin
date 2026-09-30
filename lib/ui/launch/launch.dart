@@ -289,6 +289,9 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
         setState(() {
           started = true;
         });
+        // VPN 模式（鸿蒙）：代理服务常驻（startup 自启），此分支同样申请长时任务保活，
+        // 否则息屏约 1 分钟后系统会销毁 VPN（PoC 结论 P2）
+        _applyOhosKeepAlive();
         return;
       }
 

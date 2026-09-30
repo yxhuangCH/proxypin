@@ -28,11 +28,22 @@ import Want from '@ohos.app.ability.Want';
 import common from '@ohos.app.ability.common';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { VpnAbilityState } from '../vpnability/ProxyPinVpnAbility';
+import vpntunnel from 'libvpntunnel.so';
 
 const TAG: string = 'ProxyPinVpnPlugin';
 const CHANNEL_NAME: string = 'com.proxy/proxyVpn';
 const VPN_ABILITY_NAME: string = 'ProxyPinVpnAbility';
+
+/** vpntunnel napi 接口（libvpntunnel.so） */
+interface VpnTunnel {
+  startTunnel(tunFd: number, proxyHost: string, proxyPort: number): boolean;
+  stopTunnel(): void;
+  /** 跨进程查询：扩展进程隧道是否在运行（经 127.0.0.1 控制通道） */
+  isTunnelRunning(): boolean;
+  getRemoteByPort(localPort: number): Record<string, Object> | null;
+}
+
+const tunnel: VpnTunnel = vpntunnel as VpnTunnel;
 
 /**
  * 本机 VPN 抓包插件（路线 A，channel 与 Android VpnServicePlugin 同名同协议，
@@ -40,7 +51,7 @@ const VPN_ABILITY_NAME: string = 'ProxyPinVpnAbility';
  *
  * startVpn → vpnExtension.startVpnExtensionAbility(want)（首次系统弹授权框），
  * 配置经 want.parameters 传给 ProxyPinVpnAbility；
- * stopVpn → stopVpnExtensionAbility；isRunning → 查 VpnAbilityState。
+ * stopVpn → stopVpnExtensionAbility；isRunning → 经隧道控制通道跨进程查询（扩展在独立进程）。
  *
  * 鸿蒙差异（见 harmony/docs/09）：
  * - proxyPassDomains（CIDR 排除路由）鸿蒙 VpnConfig 无对应物，忽略；
@@ -87,7 +98,8 @@ export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandl
         this.restartVpn(call, result);
         break;
       case 'isRunning':
-        result.success(VpnAbilityState.isRunning);
+        // 扩展在独立进程，静态状态不可见（PoC 结论 P1）：经 127.0.0.1 控制通道查询隧道
+        result.success(tunnel.isTunnelRunning());
         break;
       default:
         result.notImplemented();
@@ -95,11 +107,12 @@ export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandl
     }
   }
 
-  private buildWant(proxyPort: number, trustedApps: string[], blockedApps: string[]): Want {
+  private buildWant(proxyHost: string, proxyPort: number, trustedApps: string[], blockedApps: string[]): Want {
     return {
       bundleName: this.uiContext.abilityInfo.bundleName,
       abilityName: VPN_ABILITY_NAME,
       parameters: {
+        'proxyHost': proxyHost,
         'proxyPort': proxyPort,
         'trustedApps': trustedApps,
         'blockedApps': blockedApps,
@@ -109,14 +122,15 @@ export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandl
 
   private startVpn(call: MethodCall, result: MethodResult): void {
     const args: ESObject = call.args;
+    const proxyHost: string = (args.get('proxyHost') as string) ?? '127.0.0.1';
     const proxyPort: number = (args.get('proxyPort') as number) ?? 9099;
     const allowApps: string[] = (args.get('allowApps') as string[]) ?? [];
     const disallowApps: string[] = (args.get('disallowApps') as string[]) ?? [];
     hilog.info(0x0000, TAG,
-      'startVpn port=%{public}d allow=%{public}zu disallow=%{public}zu',
-      proxyPort, allowApps.length, disallowApps.length);
+      'startVpn %{public}s:%{public}d allow=[%{public}s] disallow=[%{public}s]',
+      proxyHost, proxyPort, allowApps.join(','), disallowApps.join(','));
 
-    const want = this.buildWant(proxyPort, allowApps, disallowApps);
+    const want = this.buildWant(proxyHost, proxyPort, allowApps, disallowApps);
     vpnExtension.startVpnExtensionAbility(want).then(() => {
       hilog.info(0x0000, TAG, 'vpn extension started');
       result.success(true);

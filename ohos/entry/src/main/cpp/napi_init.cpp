@@ -15,139 +15,119 @@
  */
 
 /**
- * 路线 A PoC：验证 C++ NDK 层可 read tun fd（鸿蒙 vpnExtension.create() 返回的原生 fd）。
- * startTunLog 起 pthread 循环 poll+read，解析 IPv4 头后打 hilog。
- * 第 1 期将替换为完整隧道栈（tun_pump/connection_handler/forwarder 等，见 doc 09 §5）。
+ * 隧道栈 napi 薄接口（路线 A 第 1 期）。
+ *
+ * 同一个 libvpntunnel.so 被两个进程加载：
+ * - VPN 扩展进程（ProxyPinVpnAbility）：startTunnel / stopTunnel（驱动隧道）
+ * - 主进程 Flutter 插件（ProxyPinVpnPlugin / ProxyPinProcessInfoPlugin）：
+ *   isTunnelRunning / getRemoteByPort（跨进程查询扩展进程的隧道状态与端口映射）
+ *
+ * 跨进程查询走 127.0.0.1:<kControlPort> 的控制通道，见 tunnel.cpp。
  */
 
 #include "napi/native_api.h"
 #include <hilog/log.h>
-#include <poll.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <atomic>
 
-#define LOG_TAG "ProxyPinVpnTunnel"
-#define MAX_PACKET_LEN 2048
+#include <string>
 
-static std::atomic<bool> g_running(false);
-static std::atomic<int> g_tunFd(-1);
-static pthread_t g_thread;
-static pthread_mutex_t g_threadMutex = PTHREAD_MUTEX_INITIALIZER;
+#include "tunnel.h"
 
-static void *TunLogThread(void *arg)
-{
-    (void)arg;
-    int fd = g_tunFd.load();
-    OH_LOG_Print(LOG_APP, LOG_INFO, 0x0000, LOG_TAG, "tun log thread started, fd=%{public}d", fd);
+#define LOG_TAG "ProxyPinTunnel"
 
-    unsigned char buf[MAX_PACKET_LEN];
-    while (g_running.load()) {
-        struct pollfd pfd;
-        pfd.fd = fd;
-        pfd.events = POLLIN;
-        pfd.revents = 0;
-        int ret = poll(&pfd, 1, 500);
-        if (ret <= 0) {
-            continue;
-        }
-        if ((pfd.revents & POLLIN) == 0) {
-            continue;
-        }
-        ssize_t n = read(fd, buf, sizeof(buf));
-        if (n <= 0) {
-            continue;
-        }
+namespace {
 
-        // 解析 IPv4 头：版本/IHL/协议/源/目的地址
-        if (n < 20 || (buf[0] >> 4) != 4) {
-            OH_LOG_Print(LOG_APP, LOG_WARN, 0x0000, LOG_TAG, "non-ipv4 packet, len=%{public}zd", n);
-            continue;
-        }
-        unsigned int ihl = static_cast<unsigned int>(buf[0] & 0x0F) * 4;
-        if (ihl < 20 || static_cast<ssize_t>(n) < static_cast<ssize_t>(ihl)) {
-            continue;
-        }
-        int proto = buf[9];
-        const unsigned char *src = buf + 12;
-        const unsigned char *dst = buf + 16;
+using proxypin::RemoteTarget;
+using proxypin::Tunnel;
 
-        if (proto == 6 || proto == 17) { // TCP / UDP，附带端口
-            if (static_cast<ssize_t>(n) < static_cast<ssize_t>(ihl + 4)) {
-                continue;
-            }
-            int srcPort = (buf[ihl] << 8) | buf[ihl + 1];
-            int dstPort = (buf[ihl + 2] << 8) | buf[ihl + 3];
-            OH_LOG_Print(LOG_APP, LOG_INFO, 0x0000, LOG_TAG,
-                "pkt len=%{public}zd proto=%{public}d "
-                "%{public}u.%{public}u.%{public}u.%{public}u:%{public}d -> "
-                "%{public}u.%{public}u.%{public}u.%{public}u:%{public}d",
-                n, proto, src[0], src[1], src[2], src[3], srcPort,
-                dst[0], dst[1], dst[2], dst[3], dstPort);
-        } else {
-            OH_LOG_Print(LOG_APP, LOG_INFO, 0x0000, LOG_TAG,
-                "pkt len=%{public}zd proto=%{public}d "
-                "%{public}u.%{public}u.%{public}u.%{public}u -> "
-                "%{public}u.%{public}u.%{public}u.%{public}u",
-                n, proto, src[0], src[1], src[2], src[3], dst[0], dst[1], dst[2], dst[3]);
-        }
-    }
-
-    OH_LOG_Print(LOG_APP, LOG_INFO, 0x0000, LOG_TAG, "tun log thread stopped");
-    return nullptr;
-}
-
-static napi_value StartTunLog(napi_env env, napi_callback_info info)
-{
-    size_t argc = 1;
-    napi_value args[1];
+napi_value StartTunnel(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3] = {nullptr};
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 3) {
+        napi_throw_error(env, nullptr, "startTunnel(fd, proxyHost, proxyPort) 需要 3 个参数");
+        return nullptr;
+    }
 
-    int fd = -1;
+    int32_t fd = -1;
     napi_get_value_int32(env, args[0], &fd);
-    if (fd <= 0) {
-        napi_throw_error(env, nullptr, "invalid tun fd");
+    char proxyHost[64] = {0};
+    size_t proxyHostLen = 0;
+    napi_get_value_string_utf8(env, args[1], proxyHost, sizeof(proxyHost) - 1, &proxyHostLen);
+    int32_t proxyPort = 0;
+    napi_get_value_int32(env, args[2], &proxyPort);
+    if (fd <= 0 || proxyHostLen == 0 || proxyPort <= 0 || proxyPort > 65535) {
+        napi_throw_error(env, nullptr, "startTunnel 参数非法");
         return nullptr;
     }
 
-    pthread_mutex_lock(&g_threadMutex);
-    if (g_running.load()) {
-        pthread_mutex_unlock(&g_threadMutex);
-        return nullptr;
-    }
-    g_tunFd.store(fd);
-    g_running.store(true);
-    pthread_create(&g_thread, nullptr, TunLogThread, nullptr);
-    pthread_mutex_unlock(&g_threadMutex);
-    return nullptr;
+    bool ok = Tunnel::instance().start(fd, proxyHost, static_cast<uint16_t>(proxyPort));
+    OH_LOG_Print(LOG_APP, LOG_INFO, 0x0000, LOG_TAG, "startTunnel fd=%{public}d ok=%{public}d", fd, ok ? 1 : 0);
+
+    napi_value result = nullptr;
+    napi_get_boolean(env, ok, &result);
+    return result;
 }
 
-static napi_value StopTunLog(napi_env env, napi_callback_info info)
-{
+napi_value StopTunnel(napi_env env, napi_callback_info info) {
     (void)env;
     (void)info;
-    pthread_mutex_lock(&g_threadMutex);
-    if (g_running.load()) {
-        g_running.store(false);
-        pthread_join(g_thread, nullptr);
-    }
-    pthread_mutex_unlock(&g_threadMutex);
+    Tunnel::instance().stop();
+    OH_LOG_Print(LOG_APP, LOG_INFO, 0x0000, LOG_TAG, "stopTunnel");
     return nullptr;
+}
+
+napi_value IsTunnelRunning(napi_env env, napi_callback_info info) {
+    (void)info;
+    bool running = Tunnel::query_running();
+    napi_value result = nullptr;
+    napi_get_boolean(env, running, &result);
+    return result;
+}
+
+napi_value GetRemoteByPort(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1] = {nullptr};
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+
+    int32_t port = 0;
+    if (argc < 1 || napi_get_value_int32(env, args[0], &port) != napi_ok || port <= 0 || port > 65535) {
+        napi_value nil = nullptr;
+        napi_get_null(env, &nil);
+        return nil;
+    }
+
+    RemoteTarget target{};
+    if (!Tunnel::query_remote(static_cast<uint16_t>(port), &target)) {
+        napi_value nil = nullptr;
+        napi_get_null(env, &nil);
+        return nil;
+    }
+
+    napi_value result = nullptr;
+    napi_create_object(env, &result);
+    napi_value host = nullptr;
+    napi_create_string_utf8(env, target.host.c_str(), NAPI_AUTO_LENGTH, &host);
+    napi_set_named_property(env, result, "remoteHost", host);
+    napi_value remotePort = nullptr;
+    napi_create_int32(env, target.port, &remotePort);
+    napi_set_named_property(env, result, "remotePort", remotePort);
+    return result;
 }
 
 EXTERN_C_START
-static napi_value Init(napi_env env, napi_value exports)
-{
+napi_value Init(napi_env env, napi_value exports) {
     napi_property_descriptor desc[] = {
-        {"startTunLog", nullptr, StartTunLog, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"stopTunLog", nullptr, StopTunLog, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"startTunnel", nullptr, StartTunnel, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"stopTunnel", nullptr, StopTunnel, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"isTunnelRunning", nullptr, IsTunnelRunning, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"getRemoteByPort", nullptr, GetRemoteByPort, nullptr, nullptr, nullptr, napi_default, nullptr},
     };
     napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
     return exports;
 }
 EXTERN_C_END
 
-static napi_module vpnTunnelModule = {
+napi_module vpnTunnelModule = {
     .nm_version = 1,
     .nm_flags = 0,
     .nm_filename = nullptr,
@@ -157,7 +137,8 @@ static napi_module vpnTunnelModule = {
     .reserved = {0},
 };
 
-extern "C" __attribute__((constructor)) void RegisterVpnTunnelModule(void)
-{
+}  // namespace
+
+extern "C" __attribute__((constructor)) void RegisterVpnTunnelModule(void) {
     napi_module_register(&vpnTunnelModule);
 }

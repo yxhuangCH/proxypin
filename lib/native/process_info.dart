@@ -21,7 +21,8 @@ class ProcessInfoPlugin {
   }
 
   static Future<HostAndPort?> getRemoteAddressByPort(int port) async {
-    if (!Platforms.isAndroid()) return null;
+    // 鸿蒙与 Android 的 VPN 隧道都需要经端口映射反查原始目标（明文 HTTP 非标准端口修正）
+    if (!Platforms.isAndroid() && !Platforms.isOhos()) return null;
 
     return _methodChannel.invokeMethod<Map>('getRemoteAddressByPort', {"port": port}).then((process) {
       if (process == null) return null;

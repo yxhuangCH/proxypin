@@ -91,63 +91,71 @@ Plugin → ExtensionAbility 同进程，配置经 `want.parameters` 传递：`st
 
 目标：tun fd ↔ 本机 127.0.0.1:9099 透明转发，HTTPS 抓包端到端跑通。转发模型与 Android 一致（透明代理，Dart 侧经 SNI/Host 嗅探目标 + 端口映射修正）。
 
-### 翻译蓝本对照（`android/.../vpn/`，约 3351 行）
-
-| Android 文件 | 鸿蒙处置 | 说明 |
-|---|---|---|
-| `ProxyVpnThread.kt` | 必译 → `tun_pump.cpp` | tun fd 读写主循环，poll 阻塞读 + 写队列 |
-| `ConnectionHandler.kt`（634 行，核心） | 必译 → `connection_handler.cpp` | 报文分发 + TCP 会话状态机，工作量最大 |
-| `ConnectionManager.kt` + `Connection.kt` | 必译 → `connection.cpp/h` | 会话表（key: 协议+源/目的 IP:端口） |
-| `transport/protocol/*`（IP4/TCP/UDP 头、TCPPacketFactory） | 必译 → `packet/` | 纯位运算，机械翻译 |
-| `socket/SocketNIODataService.java` + `SocketChannelReader/Writer.java` | 必译简化 → `forwarder.cpp` | Java NIO Selector → C++ poll 多路复用，上行 socket 连 127.0.0.1:9099 |
-| `socket/ClientPacketWriter.kt` | 必译 | 写回 tun fd 队列 |
-| `util/PacketUtil.kt`、`SimpleCache.kt`、`TLS.kt`、`Tag.kt` | 必译 | 校验和、SNI 判定 |
-| `transport/icmp/*` | **裁剪** | ICMP 回复仅用于连通性测试，MVP 直接丢弃 |
-| `util/ProcessInfoManager.kt` | **改写** → `port_map.cpp` | 不解析 /proc/net；隧道栈天然知道每条会话原始目的地址，维护 `localPort → remoteHost:remotePort` 映射供 channel 查询（对应 Dart 侧 `_fixAndroidVpnPort` 需求） |
-| `socket/ProtectSocket*` | 有条件裁剪 | 若 PoC 确认自身不在 trustedApplications 内则无需 protect；否则用 `protectProcessNet()`（API 22+，真机 API 24 满足） |
-
-**UDP 取舍**：不能整体裁剪——白名单 App 的 DNS（UDP/53）走 tun，丢弃会导致域名解析失败。MVP 只实现 UDP/53 转发（`udp_dns.cpp`），其余 UDP 端口丢弃（QUIC 失败会自动回退 TCP，后续迭代补全）。
-
-### 目录结构（新建 `ohos/entry/src/main/cpp/`）
+### 最终目录结构（已实现，`ohos/entry/src/main/cpp/`）
 
 ```
 cpp/
 ├── CMakeLists.txt
-├── napi_init.cpp            # napi 薄接口
-├── tunnel/
-│   ├── tun_pump.cpp         # tun fd poll 读循环 + 写队列
-│   ├── connection_handler.cpp
-│   ├── connection.cpp/h
-│   ├── forwarder.cpp        # 上行 socket poll 多路复用 → 127.0.0.1:9099
-│   └── udp_dns.cpp          # UDP/53 最小转发
-├── packet/
-│   ├── ip4.cpp / tcp.cpp / udp.cpp
-│   └── checksum.cpp
-└── port_map.cpp
+├── napi_init.cpp      # napi 薄接口（startTunnel/stopTunnel/isTunnelRunning/getRemoteByPort）
+├── packet.h/.cpp      # IPv4/TCP/UDP 解析与构造 + 校验和 + TLS/HTTP 嗅探（对照 transport/protocol/*、PacketUtil、TLS）
+├── session.h          # 会话状态结构（对照 Connection.kt）
+├── tunnel.h/.cpp      # 单线程 poll 循环：tun 读写 + 上行 socket + TCP 状态机 + UDP 转发 + 控制通道
+└── port_map.h/.cpp    # 本地上行端口 → 原始目标映射（对照 ProcessInfoManager.localPortCache，免 /proc）
 ```
 
-### napi 接口契约
+**与蓝本的差异（实现时拍板）**：
+
+- **三线程合并为单线程 poll 循环**。Android 用「VPN 阻塞读线程 + NIO Selector 线程 + 客户端写队列线程」+ ReentrantLock；本实现把 tun fd、全部上行 socket、控制监听 fd 一并交给一个 poll 线程，回包也由该线程直接写 tun，会话表无锁。语义等价，代码量约为蓝本 1/2。
+- **UDP 全量转发**（任意端口直连），非计划中「仅 UDP/53」。上行 UDP 用 `connect()` 的 datagram socket，双向转发；QUIC 流量因此也能正常回落。
+- **新增 127.0.0.1:9109 控制通道**：扩展进程（隧道所在）跑一个 loopback TCP 服务，主进程插件经它查询 isRunning（解决 P1 静态状态跨进程不可见）与 port_map。协议为定长小报文（magic+op+arg → status+port+host）。
+- **protectProcessNet()**（API 22+）在 `create()` 后调用，保护扩展进程内全部后续 socket；黑名单模式始终自排除本应用（对齐 Android `addDisallowedApplication(self)`）。
+- **IPv6 / 分片 / ICMP 显式丢弃**。注意 IPv4 flags 位：Android `IP4Header` 的 `mayFragment(0x4000)/lastFragment(0x2000)` 实为 DF/MF，分片判定必须用 MF+offset，不能用 DF（DF 在真实 TCP 报文上几乎恒置位）。
+- **地址字节序**：`read_be32` 解析出的是大端解释值（127.0.0.1 → 0x7F000001），赋给 `sin_addr.s_addr` 前必须 `htonl()`（直连与 UDP 路径都用得到；Android 走 `InetSocketAddress(string)` 隐式正确）。
+- **idle 回收**：UDP 会话 60s 空闲回收、TCP 半开会话 120s 回收（Android 不回收 UDP，长跑会漏 fd）。
+- **MSS 恒为 0**：Android `TCPHeader.handleTcpOptions` 从未被调用，下行分片恒走 1024 兜底（`push_data_to_client`），本实现保持同样行为。
+
+### napi 接口契约（已实现）
 
 ```
-napi_start_tunnel(tun_fd: number, proxy_host: string, proxy_port: number): boolean
-napi_stop_tunnel(): void
-napi_get_remote_by_port(local_port: number): string | null   // "host:port"，查 port_map
+startTunnel(tunFd: number, proxyHost: string, proxyPort: number): boolean   // 扩展进程
+stopTunnel(): void                                                            // 扩展进程
+isTunnelRunning(): boolean                                                    // 主进程，跨进程查询
+getRemoteByPort(localPort: number): {remoteHost: string, remotePort: number} | null  // 主进程
 ```
 
-隧道栈在独立线程跑 poll 循环（tun fd + 全部上行 socket），与 ArkTS/Flutter 线程无锁交互（仅经 port_map 互斥表）。
+### 原生侧补全（已实现）
 
-### 原生侧补全
-
-- `ProxyPinVpnPlugin.ets` 补全 `restartVpn`（stop+start）/`isRunning`；
-- 新增 `ProxyPinProcessInfoPlugin.ets`：实现 `com.proxy/processInfo` 的 `getRemoteAddressByPort`（查 C++ port_map）；
+- `ProxyPinVpnPlugin.ets`：`isRunning` 改为经隧道控制通道跨进程查询；`startVpn` 透传 `proxyHost`。
+- 新增 `ProxyPinProcessInfoPlugin.ets`：实现 `com.proxy/processInfo` 的 `getRemoteAddressByPort`（经隧道控制通道查 port_map）；`getProcessByPort` 恒返回 null。
 - EntryAbility 注册两个插件。
+- Dart：`lib/native/process_info.dart` 的 `getRemoteAddressByPort` 与 `lib/network/channel/channel_dispatcher.dart` 的 `_fixAndroidVpnPort` 放开 ohos；`lib/ui/launch/launch.dart` 的 VPN 启动分支补 `_applyOhosKeepAlive()`（修复 P2 息屏断 VPN）。
 
-### 验收标准
+### 本地自测（不上真机即可回归）
 
-- [ ] 白名单=浏览器：浏览器访问 HTTPS 站点 → ProxyPin 请求列表出现解密记录
-- [ ] 白名单外 App 联网 → 不出现记录
-- [ ] 清空白名单 + 黑名单配浏览器：浏览器流量消失，其余 App 正常被抓
-- [ ] 明文 HTTP 非标准端口请求端口修正正确（port_map 路径）
+`ohos/entry/src/main/cpp/` 下代码与平台头解耦（仅 hilog 需打桩），可用宿主机直接编译验证（用 `AF_UNIX SOCK_DGRAM` socketpair 冒充 tun fd，本机 TCP/UDP 服务冒充代理与目标）。曾在本机验证 11 个场景全过：SYN→SYN-ACK、数据→ACK、TLS 嗅探走代理、port_map 登记与跨进程查询、上行回包 PSH、FIN/RST/未知会话、UDP 双向、IPv6/畸形/分片丢弃、DF 位不丢弃、直连不走代理、非标准端口 HTTP 走代理且 port_map 记录。期间借此发现并修复：DF 位误丢弃、直连地址未 htonl、控制通道 accept 继承 O_NONBLOCK（macOS/BSD 特有）。
+
+### 验收标准（2026-09-30 真机通过）
+
+- [x] 白名单=浏览器：浏览器访问 HTTPS 站点 → ProxyPin 请求列表出现解密记录
+      实测：`GET https://www.baidu.com/sugrec [200] TEXT`、`m.baidu.com [200]`、`ext.baidu.com [403]`、`gips2.baidu.com [304] IMAGE`，条目右侧为绿色解密标记
+- [x] 白名单外 App 联网 → 不出现记录
+      实测：启动应用市场（大量联网，QUIC/h3 有实际收发字节）期间 tun 零报文 —— 系统级 `trustedApplications` 过滤生效
+- [x] 清空白名单 + 黑名单配浏览器：浏览器流量消失，其余 App 正常被抓
+      实测：`blocked=[com.huawei.hmos.browser]` 时浏览器访问 baidu 期间 tun 零报文；改为 `blocked=[com.fake.nonexistent]`（等价全量抓包）后浏览器访问知乎成功解密（域名列表出现 `https://www.zhihu.com` 且无 ssl error）
+- [x] 明文 HTTP 非标准端口请求端口修正正确（port_map 路径）
+      实测：`http://portquiz.net:8080/` 经隧道走代理成功（`proxied TCP|10.0.0.2:xxxxx->35.180.139.74:8080`，port_map 登记），ProxyPin 列表出现 `http://portquiz.net:8080` 4 次
+- [x] 双模式共存：VPN 开启时 Mac 经 `curl -x 192.168.3.188:9099` 访问 HTTP/HTTPS 均 200，路线 B 不受影响
+
+`_fixAndroidVpnPort` 的**端口覆盖分支**（Host 头不带端口 + 目标非 80）真机上无法自然构造（浏览器总会带端口），该分支由本地单测覆盖（tunnel_test 场景 11 + port_map 跨进程查询）。
+
+### 第 1 期真机实测发现
+
+1. **未 connect 的 TCP 会话不能进 poll**（真机致命 bug，已修）。SYN 建会话后、首个数据报文触发 `init_proxy_connect` 之前，socket 尚未 connect；若此窗口内 poll 被唤醒（控制通道查询、其他会话活动），内核会对未连接 socket 报 `POLLHUP/POLLIN`，`read()` 返回 `ENOTCONN(107)` → 会话被误杀 → 后续报文全变 `unknown session`。现象：浏览器整页加载失败，日志刷屏 `read TCP|... failed errno=107`。修法：poll 注册时跳过 `protocol==TCP && !connecting && !connected` 的会话。已加本地回归用例（`1.5 poll wakeup before first data`）。
+2. **同子网目标不走 VPN**：手机访问同 WiFi 网段的 `192.168.3.96:8100` 不经 tun（系统自动排除本地子网，避免回环）。验证明文抓包需用外网目标。
+3. **华为自家服务会因证书 pinning 拒绝解密**：`httpdns.platform.dbankcloud.com`、`browsercfg-drcn.cloud.dbankcloud.cn`、`feeds-drcn.cloud.huawei.com.cn` 等持续报 `SSLV3_ALERT_CERTIFICATE_UNKNOWN`。这是客户端行为，与 Android 一致，不影响其它站点抓包；日志中这类失败数量会远高于成功数，勿据此判定整体失败。
+4. **CA 安装路径（鸿蒙无 ADB 式一键安装）**：手机浏览器访问 `http://127.0.0.1:9099/ssl`（代理内置的 `requestUrl == 'http://127.0.0.1:<port>/ssl'` 分支，`lib/network/handle/http_proxy_handle.dart:34`）下载 `ProxyPinCA.crt` → 设置 → 隐私和安全 → 高级 → 证书与凭据 → 从存储设备安装 → CA 证书 → 选择下载目录中的 crt → 安装。**安装后必须重启目标 App**（本次为浏览器），否则该进程沿用旧信任库，继续报 `CERTIFICATE_UNKNOWN`。
+5. **hilog 的 ArkTS 格式不支持 `%zu`**：`hilog.info(..., '%{public}zu', arr.length)` 会输出字面 `}zu`，导致误判名单为空。改用 `arr.join(',')` + `%{public}s` 打印内容（已修 `ProxyPinVpnPlugin.ets` / `ProxyPinVpnAbility.ets`）。
+6. **FAB 点击与 extension 生命周期**：`aa force-stop` 主进程不会回收 `com.network.proxy:vpn` 子进程，此时 Dart 侧 `Vpn.isRunning()` 为 true，FAB 呈"停止"态，点击会**关闭** VPN 而非启动。脚本化验证时需先确认 FAB 状态（或观察 hilog 是否出现 `vpn extension stopped`）再决定点击次数。
 
 ## 6. 第 2 期：白名单 UI 与门禁接入
 
@@ -161,7 +169,7 @@ napi_get_remote_by_port(local_port: number): string | null   // "host:port"，�
 | `lib/native/process_info.dart` | `getRemoteAddressByPort` 放开 ohos |
 | `lib/network/channel/channel_dispatcher.dart:218` | `_fixAndroidVpnPort` 条件改为 `!(isAndroid() \|\| isOhos())` |
 | `lib/ui/mobile/mobile.dart:297` | ~~PiP 必须排除 ohos~~ **核实后无需改动**：:301 已有 `!Platforms.isAndroid() \|\| !pipEnabled` 保护，ohos 不会触碰 `com.proxy/pictureInPicture` channel。:335 的 `Vpn.isRunning()` 恢复逻辑 ohos 可用，保留。:465-493 FAB 逻辑无需改动 |
-| `lib/ui/launch/launch.dart:287-293` | **VPN 模式保活补齐（实现期新发现）**：`_applyOhosKeepAlive()` 只在 `serverLaunch` 分支（:301）调用；VPN 模式下 FAB 走 `serverLaunch=false` 分支，首次启动不申请长时任务，仅靠 resumed 回调（:202）补。需在 `start()` 的 `serverLaunch=false` 分支补调 `_applyOhosKeepAlive()` |
+| `lib/ui/launch/launch.dart:287-293` | **VPN 模式保活补齐（已实现）**：`_applyOhosKeepAlive()` 原先只在 `serverLaunch` 分支调用；VPN 模式下 FAB 走 `serverLaunch=false` 分支，首次启动不申请长时任务，仅靠 resumed 回调补。已在 `start()` 的 `serverLaunch=false` 分支补调（字段命中 P2 息屏约 1 分钟断 VPN） |
 | `lib/ui/mobile/widgets/remote_device.dart:266-268` | 远程设备 ipProxy 流程调 `Vpn.startVpn(remoteHost, ...)`——隧道栈天然支持，不改；验证阶段覆盖 |
 | `lib/ui/mobile/menu/drawer.dart:399`、`menu.dart:60` | 无需改动，`supportAppFilter()` 放开后入口自动出现 |
 
@@ -197,7 +205,7 @@ napi_get_remote_by_port(local_port: number): string | null   // "host:port"，�
 2. PoC 白名单验证：trustedApplications 只配浏览器 → `hdc shell hilog` 观察浏览器有报文、微信无报文；blockedApplications 反向复验；
 3. 全链路抓包：白名单=浏览器访问 HTTPS → 出现解密记录；名单外 App 不出现；清空白名单+黑名单=浏览器 → 浏览器流量消失；
 4. 双模式共存：VPN 开启状态下，Mac 经 `curl -x 手机IP:9099` 抓包仍正常（路线 B 不受影响）；
-5. 端口修正回归：非标准端口明文 HTTP 请求，确认 `_fixAndroidVpnPort` 的 ohos 路径修正正确；
+5. 端口修正回归：非标准端口明文 HTTP 请求走通 port_map 路径。注意**真机只能验证明文 HTTP 非标准端口被正确代理**（浏览器总会把端口写进 Host 头，`_fixAndroidVpnPort` 的覆盖分支不触发，该分支由本地单测覆盖）；另注意同子网目标不经 tun，需用外网目标；
 6. 回归：Android 真机白名单抓包一遍；macOS/Windows 启动验证桌面代理无碍；`flutter analyze` 0 error。
 
 ## 9. 执行顺序

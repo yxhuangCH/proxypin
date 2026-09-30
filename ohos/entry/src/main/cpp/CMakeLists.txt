@@ -1,8 +1,17 @@
-# 鸿蒙 VPN 隧道 napi 模块（路线 A PoC）
+# 鸿蒙 VPN 隧道 napi 模块（路线 A 第 1 期：完整隧道栈）
 # 实施文档：harmony/docs/09-应用白名单与VPN路线实施.md
 cmake_minimum_required(VERSION 3.5.0)
 project(proxypin_vpntunnel)
 
-add_library(vpntunnel SHARED napi_init.cpp)
+add_library(vpntunnel SHARED
+    napi_init.cpp
+    packet.cpp
+    port_map.cpp
+    tunnel.cpp
+)
+
+# C++17：structured/unordered 容器 + chrono
+target_compile_features(vpntunnel PRIVATE cxx_std_17)
 
 target_link_libraries(vpntunnel PUBLIC libace_napi.z.so libhilog_ndk.z.so)
+
