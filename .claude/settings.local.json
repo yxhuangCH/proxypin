@@ -136,7 +136,21 @@
       "Bash(dart format:*)",
       "Bash(flutter doctor:*)",
       "Read(//Users/yxhuang/.pub-cache/hosted/pub.flutter-io.cn/zstandard_ios-1.5.0/ios/Classes/zstd/**)",
-      "Read(//Users/yxhuang/.pub-cache/hosted/pub.flutter-io.cn/zstandard_ios-1.5.0/ios/Classes/zstd/legacy/**)"
+      "Read(//Users/yxhuang/.pub-cache/hosted/pub.flutter-io.cn/zstandard_ios-1.5.0/ios/Classes/zstd/legacy/**)",
+      "Bash(adb devices:*)",
+      "Bash(flutter devices:*)",
+      "Bash(keytool -help)",
+      "Bash(mkdir -p ~/.android)",
+      "Bash(keytool -genkeypair -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname \"CN=Android Debug,O=Android,C=US\")",
+      "Bash(keytool -list -keystore ~/.android/debug.keystore -storepass android)",
+      "Bash(adb install:*)",
+      "Bash(adb shell:*)",
+      "Bash(adb exec-out:*)",
+      "Bash(wait)",
+      "Bash(adb uninstall:*)",
+      "Bash(adb pull:*)",
+      "Bash(S=com.hsbc.mobilebanking.pushmessagingdomainmodelplugin.sampleapp adb shell \"am force-stop com.network.proxy\")",
+      "Bash(adb logcat:*)"
     ]
   }
 }
