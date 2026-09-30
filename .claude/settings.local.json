@@ -132,7 +132,11 @@
       "Bash(awk '{for\\(i=6;i<=NF;i++\\) printf \"%s \", $i; print \"\"}')",
       "Bash(echo \"=== browser phase tunnel lines: $\\(hdc shell 'hilog -x')",
       "Bash(netstat -an -p tcp)",
-      "Bash(pkill -f \"http.server 8100\")"
+      "Bash(pkill -f \"http.server 8100\")",
+      "Bash(dart format:*)",
+      "Bash(flutter doctor:*)",
+      "Read(//Users/yxhuang/.pub-cache/hosted/pub.flutter-io.cn/zstandard_ios-1.5.0/ios/Classes/zstd/**)",
+      "Read(//Users/yxhuang/.pub-cache/hosted/pub.flutter-io.cn/zstandard_ios-1.5.0/ios/Classes/zstd/legacy/**)"
     ]
   }
 }
