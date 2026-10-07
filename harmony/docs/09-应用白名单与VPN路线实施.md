@@ -227,12 +227,14 @@ ProxyPin 中 `[-2]` 的语义是 `HttpStatus(-2, 'SSL handshake failed, 请检�
 
 同族银行类应用对照（同一 SDK 的两个银行应用内部/证书测试构建，同一台设备、同一时刻、同一份 ProxyPin 配置；包名与域名按保密要求脱敏）：
 
-| 包名 | 性质 | 结果 |
+| 应用（脱敏） | 性质 | 结果 |
 |---|---|---|
 | 银行应用 A 内部 cert 构建 | 内部 cert 构建 | 行为统计类端点 → **`[200] JSON`，正文可读**（多条 KB 级响应），可正常抓包解密 |
 | 银行应用 B 内部 cert 构建 | 内部 cert 构建（访问其 UAT/预发环境域名） | 全部 `CONNECT [-2]`（数十次）**无一解密**；同一 SDK 在 A 侧可解密、在 B 侧被固定，说明固定发生在**应用侧**而非端点侧 |
 
 即：「内部/cert 构建」不代表「一定可抓」，是否可解密取决于该应用自身的 pinning 配置，需按应用实测。
+
+鸿蒙同族数据点（2026-10-07）：白名单加入银行应用 B 的鸿蒙内部构建后，其请求全部 `CONNECT [-2]`，但响应体与 Android 不同——为 **`HandshakeException: Handshake error in server (OS Error: TLSV1_ALERT_UNKNOWN_CA(tls_record.cc:486))`**，即应用在收到 ProxyPin CA 后**主动回 `unknown_ca` alert** 拒绝握手（与 Android 的「Connection terminated during handshake」同属应用侧拒绝信任用户 CA，表现形态不同：一个是显式 alert、一个是直接断连）。两条辅证：① 列表里出现某推送 SDK 统计域名的 `CONNECT [-2]`——该域名属应用内嵌推送 SDK，能进隧道恰好佐证白名单命中的正是该应用；② 同机同配置浏览器（也在白名单内）仍可正常解密 baidu/zhihu，证明 ProxyPin CA 安装无误、隧道与白名单均正常，失败仅发生在该应用自身的信任策略。鸿蒙无 root、无注入渠道，唯一路径是应用内部构建放行用户 CA / 关闭固定。
 
 ### P2 复验：息屏后 VPN 存活（2026-09-30，Mate 80 Pro / SGT-AL50，HarmonyOS 6.1.1.120 API 24）
 
