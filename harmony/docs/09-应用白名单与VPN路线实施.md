@@ -41,7 +41,7 @@ Android 版 ProxyPin 的「应用白名单」：只代理白名单内 App 的流
 | 第 1 期 | 隧道栈全量移植（C++ NDK，约 2500-3000 行） | 2-3 周 | ✅ 2026-09-30 真机通过（§5） |
 | 第 2 期 | 白名单 UI 接入 + Dart 门禁放开 | 3-5 天 | ✅ 2026-09-30 真机通过（§6） |
 
-三期已全部完成，功能在 `feature/ohos-vpn-poc` 分支上落地；尚未合并 main，也未发布到 AppGallery（见 R2）。
+三期已全部完成，功能在 `feature/ohos-vpn-poc` 分支上落地；尚未合并 main。**上架决策：现阶段不做 AppGallery 上架**，以本地开发/侧载（hdc）为准（见 R2）。
 
 ## 4. 第 0 期：PoC —— 验证三个致命假设
 
@@ -192,8 +192,36 @@ getRemoteByPort(localPort: number): {remoteHost: string, remotePort: number} | n
 - [x] 非预置包名显示回落：`com.example.test` 显示名 = 包名本身（`ohosPresetAppName` 返回 null 的回落分支）
 - [x] 互斥提示：白名单页（黑名单 2 项）与黑名单页（白名单 2 项）对称显示 banner，文案带对方条目数与后果，「知道了」可关闭
 - [x] 落盘：UI 添加后返回上一页（触发 `dispose`）→ `config.cnf` 中 `appBlacklist` 已含新条目
-- [x] 构建回归：`flutter analyze` 0 error（230 条历史 info 级问题，与改动前一致）；`flutter build hap --release` ✅（并已 `hdc install` 到真机冒烟：白名单页正常渲染）、`flutter build macos --debug` ✅、`flutter build ios --debug --no-codesign` ✅（首次失败于 `zstandard_ios` pod 的 `Sync zstd`/`Remove synced zstd` 两个 script phase 竞态，重跑即过，与本期改动无关）；`flutter build apk` 卡在 `:app:packageDebug`（`SigningConfig "release" is missing required property "storeFile"`——本机缺 `android/key.properties`，属既有环境问题，Dart/Kotlin 编译阶段均已通过）
-- [~] Android 白名单回归：**未真机跑**（本机无 Android 设备，且 APK 打包缺 `android/key.properties`）。代码层面逐处核对：改动全部落在 `Platforms.isOhos()` 运行时分支或新增 ohos 专用文件内，Android 分支的执行路径与改动前逐行一致（`app_filter.dart` 的 3 处 ohos 分支、`installed_apps.dart` 的提前返回守卫在 Android 上恒为 false、`menu.dart` 仅图标取值按平台切换）。合并主线前建议在 Android 真机上补一次白名单抓包回归
+- [x] 构建回归：`flutter analyze` 0 error（230 条历史 info 级问题，与改动前一致）；`flutter build hap --release` ✅（并已 `hdc install` 到真机冒烟：白名单页正常渲染）、`flutter build macos --debug` ✅、`flutter build ios --debug --no-codesign` ✅（首次失败于 `zstandard_ios` pod 的 `Sync zstd`/`Remove synced zstd` 两个 script phase 竞态，重跑即过，与本期改动无关）、`flutter build apk --debug` ✅（此前失败只因本机缺 `android/key.properties`，补齐本地签名配置后即通过）
+- [x] Android 白名单回归（2026-09-30 真机 LIO-AN00 / Android 12 API 31）
+      1. 菜单入口 `应用白名单` 图标为 Android 机器人（`isOhos() ? phone_android : android_rounded` 按平台取值正确），**未出现鸿蒙互斥 banner**（ohos-only 分支未泄漏）
+      2. 白名单页正常渲染：空名单时显示"未设置白名单应用时会对所有应用抓包"，`isLoading` 正常收敛——`initState → didChangeDependencies` 的修正对 Android 同样生效
+      3. 「+」仍进 `InstalledAppsWidget`：枚举出真实已装应用与真实图标（大众点评 / 58同城 / UC浏览器 / 微信输入法 …），搜索框与"显示系统应用"开关都在
+      4. 添加 UC浏览器 → 列表显示真实图标 + 包名；`run-as` 直读 `config.cnf` 确认 `appWhitelist:["com.UCMobile"]`、`appWhitelistEnabled:true` 已落盘
+      5. 白名单生效：UC浏览器访问 `portquiz.net:8080` 等 → ProxyPin 出现记录（HTTP/HTTPS 均有，含非标准端口 `:8080` 明文 HTTP 走 port_map 路径）；未列入的 58同城 前台运行 18s → **请求列表零新增**，且该时段 ProxyPin 进程 logcat 中 `wuba|58.com` 匹配数为 0
+
+### Android 白/黑名单双向隔离回归（2026-09-30，LIO-AN00 / Android 12 API 31）
+
+上一轮 Android 回归只验了白名单。本轮补验**黑名单**，并把抓包链路收敛到「仅 VPN」以排除system proxy 干扰：
+
+- 隔离手法：`config.cnf` 置 `enableSystemProxy:false`，重启 App 后点 FAB 起 VPN；`logcat` 中 `ProxyVpnService: startVpn` 打印的 `allowPackages` 即生效名单，`connectivity` 出现 `Transports: WIFI|VPN` 网络代理与 `tun0` 即隧道已建，`settings get global http_proxy` 为 `null` 即无系统代理旁路。
+- **白名单模式**（`appWhitelistEnabled:true`, `appWhitelist:["com.UCMobile"]`）：UC浏览器前台 18s → `pdds-cdn.uc.cn` 等 `[200] HTTP` 解密记录成片出现；未列入的高德地图前台 22s、京东 15s → **请求列表零新增**。
+- **黑名单模式**（`appWhitelistEnabled:false`, `appBlacklist:["com.UCMobile"]`）：58同城前台 20s → `app.58.com` / `empower.58.com` / `rentercenter.58.com` 等记录出现；随后 UC浏览器前台 15s → **无任何 `com.UCMobile` 记录**。
+
+结论：Android 侧 `addAllowedApplication`/`addDisallowedApplication` 两条路径均按预期生效，白名单页 UI 改动未污染 Android 行为。
+
+### 抓包能力边界：`-2` 与按应用证书固定（2026-09-30）
+
+ProxyPin 中 `[-2]` 的语义是 `HttpStatus(-2, 'SSL handshake failed, 请检查证书安装是否正确')`（`lib/network/util/proxy_helper.dart:198`），响应体为原始异常文本。真机抓到的失败原文为 **`HandshakeException: Connection terminated during handshake`** —— 客户端在握手中途直接断连，是**证书固定（certificate pinning）**的典型特征，而非路由失败：该应用流量已成功进入隧道（记录里能看到 `CONNECT <host>`），只是 TLS 被应用自己掐断。设备无 root、CA 只能装用户证书链，Android 7+ 目标应用默认不信任用户 CA，因此这类应用**只能看到连接目标，无法解密**。
+
+同族银行类应用对照（同一 SDK 的两个银行应用内部/证书测试构建，同一台设备、同一时刻、同一份 ProxyPin 配置；包名与域名按保密要求脱敏）：
+
+| 包名 | 性质 | 结果 |
+|---|---|---|
+| 银行应用 A 内部 cert 构建 | 内部 cert 构建 | 行为统计类端点 → **`[200] JSON`，正文可读**（多条 KB 级响应），可正常抓包解密 |
+| 银行应用 B 内部 cert 构建 | 内部 cert 构建（访问其 UAT/预发环境域名） | 全部 `CONNECT [-2]`（数十次）**无一解密**；同一 SDK 在 A 侧可解密、在 B 侧被固定，说明固定发生在**应用侧**而非端点侧 |
+
+即：「内部/cert 构建」不代表「一定可抓」，是否可解密取决于该应用自身的 pinning 配置，需按应用实测。
 
 ### 第 2 期真机实测发现
 
@@ -203,13 +231,16 @@ getRemoteByPort(localPort: number): {remoteHost: string, remotePort: number} | n
 | F2 | `应用黑名单` 的 UI 入口只在抽屉里，而抽屉仅在 `bottomNavigation=false` 时存在；默认 `bottomNavigation=true` 时黑名单无入口 | **既有产品行为，非本期引入**（Android 同样如此）。鸿蒙上白名单才是主场景，暂不处理；如需补齐，可在白名单页 AppBar 加跳到黑名单的入口 |
 | F3 | 选择器的已添加过滤按**本页**作用域（白名单页的选择器不排除只在黑名单里的应用） | 与 Android `InstalledAppsWidget` 行为一致，不改 |
 | F4 | 页面 `dispose` 才 `flushConfig`；`aa force-stop` 会跳过 dispose，此时 UI 上的改动不落盘 | 既有设计，非本期引入；脚本化验证时注意先进后退再读 `config.cnf` |
+| F5 | 白名单条目若指向**未安装**的包名，Android 侧 `addAllowedApplication` 静默忽略、不报错，白名单也不会因此崩 | 脚本化验证前必须先用 `pm list packages -3` 核对条目已安装；本轮曾把未安装的包名写进白名单，导致一次白名单测试实际只覆盖了 2 个应用而未被察觉 |
+| F6 | 脚本化点击坐标目测不可靠：截图缩放会让目测的 FAB 位置偏上约 120px（实测 FAB 中心 = 原始像素 `(1043,1977)`，目测值 ≈ `(1044,1855)` 落在列表行上），表现为"点了没反应" | 坐标一律从 PNG 原始像素算目标 bbox（`FloatingActionButton` 外框、行文本带）再点击，不要靠目测换算 |
+| F7 | VPN 起停只能走 UI：`am start-service .../ProxyVpnService` 被 `android.permission.BIND_VPN_SERVICE` 拒绝（`Error: Requires permission`），FAB 的 `FloatingActionButton(onPressed: null)` 只由内层 `SocketLaunch` 接管点击 | 无 root 时无法脚本化起 VPN，自动化必须点 FAB；启动成功以 `logcat` 的 `ProxyVpnService: startVpn ... allowPackages: [...]` + `connectivity` 出现 `Transports: WIFI\|VPN` 为准 |
 
 ## 7. 风险清单
 
 | # | 风险 | 等级 | 缓解 |
 |---|---|---|---|
 | R1 | NDK 读 tun fd 不可行 | 高 | 第 0 期一票否决；备选：napi 桥接 ArrayBuffer 传 ArkTS（性能差但兜底） |
-| R2 | AppGallery 对 VPN/抓包类审核严格 | 高 | 侧载/hdc 分发为主；保留路线 B 作为上架形态，VPN 能力可摘除 extensionAbilities 段回退 |
+| R2 | AppGallery 对 VPN/抓包类审核严格 | 高 | **已决策不上架**（2026-09-30）：现阶段以本地开发 + hdc 侧载为准，不再为上架做形态妥协；保留路线 B 作为可回退形态，VPN 能力可摘除 extensionAbilities 段 |
 | R3 | 转发成环 | 中 | PoC 验收项；兜底 `protectProcessNet()` |
 | R4 | 五平台回归 | 中 | 新代码全在 ohos/ 或 `Platforms.isOhos()` 运行时分支；合并前全平台构建验证 |
 | R5 | `proxyPassDomains` CIDR 排除不支持 | 低 | 文档化；ohos 隐藏该 UI 入口 |
@@ -223,7 +254,7 @@ getRemoteByPort(localPort: number): {remoteHost: string, remotePort: number} | n
 3. 全链路抓包：白名单=浏览器访问 HTTPS → 出现解密记录；名单外 App 不出现；清空白名单+黑名单=浏览器 → 浏览器流量消失；
 4. 双模式共存：VPN 开启状态下，Mac 经 `curl -x 手机IP:9099` 抓包仍正常（路线 B 不受影响）；
 5. 端口修正回归：非标准端口明文 HTTP 请求走通 port_map 路径。注意**真机只能验证明文 HTTP 非标准端口被正确代理**（浏览器总会把端口写进 Host 头，`_fixAndroidVpnPort` 的覆盖分支不触发，该分支由本地单测覆盖）；另注意同子网目标不经 tun，需用外网目标；
-6. 回归：Android 真机白名单抓包一遍；macOS/Windows 启动验证桌面代理无碍；`flutter analyze` 0 error。
+6. 回归：Android 真机白名单抓包 ✅（2026-09-30，LIO-AN00，见 §6 验收）；macOS/Windows 启动验证桌面代理无碍——macOS 仅验证了构建，**未启动跑行为**，Windows 本机无法构建（`flutter build windows` 只能在 Windows 上跑），**待补**；`flutter analyze` 0 error ✅。
 
 ## 9. 执行顺序
 
@@ -242,4 +273,4 @@ getRemoteByPort(localPort: number): {remoteHost: string, remotePort: number} | n
 **第 2 期**：
 1. ~~platform.dart 门禁 + channel_dispatcher/mobile.dart(PiP) + installed_apps 降级~~ → 其中 mobile.dart 核实后无需改动（见 §6 表）
 2. ohos_preset_apps.dart + 应用选择页 + 互斥提示/上限
-3. 构建回归（ohos/macOS/iOS 已过，Android 受本机环境所限未跑，见 §6 验收）+ Android 真机回归（**待补**）
+3. 构建回归（ohos/macOS/iOS/Android 均已过，见 §6 验收）+ Android 真机回归 ✅（2026-09-30 完成）
