@@ -134,7 +134,15 @@ getRemoteByPort(localPort: number): {remoteHost: string, remotePort: number} | n
 
 ### 本地自测（不上真机即可回归）
 
-`ohos/entry/src/main/cpp/` 下代码与平台头解耦（仅 hilog 需打桩），可用宿主机直接编译验证（用 `AF_UNIX SOCK_DGRAM` socketpair 冒充 tun fd，本机 TCP/UDP 服务冒充代理与目标）。曾在本机验证 11 个场景全过：SYN→SYN-ACK、数据→ACK、TLS 嗅探走代理、port_map 登记与跨进程查询、上行回包 PSH、FIN/RST/未知会话、UDP 双向、IPv6/畸形/分片丢弃、DF 位不丢弃、直连不走代理、非标准端口 HTTP 走代理且 port_map 记录。期间借此发现并修复：DF 位误丢弃、直连地址未 htonl、控制通道 accept 继承 O_NONBLOCK（macOS/BSD 特有）。
+仓库内资产：`ohos/entry/src/main/cpp/test/`（`tunnel_test.cpp` + `run.sh` + `hilog_stub.cpp`/`hilog/log.h` 桩）。
+
+```
+./ohos/entry/src/main/cpp/test/run.sh      # 编译并跑全部场景，最后打印 tunnel OK
+```
+
+`cpp/` 下代码与平台头解耦（仅 hilog 需打桩），宿主机直接编译即可（用 `AF_UNIX SOCK_DGRAM` socketpair 冒充 tun fd，本机 TCP/UDP 服务冒充代理与目标）。当前 11 个场景全过：SYN→SYN-ACK、SYN 后首个数据前 poll 被唤醒（真机 errno=107 的回归）、数据→ACK、TLS 嗅探走代理、port_map 登记与跨进程查询、上行回包 PSH、FIN/RST/未知会话、UDP 双向、IPv6/畸形/分片丢弃、DF 位不丢弃、直连不走代理、非标准端口 HTTP 走代理且 port_map 记录。期间借此发现并修复：DF 位误丢弃、直连地址未 htonl、控制通道 accept 继承 O_NONBLOCK（macOS/BSD 特有）。
+
+该测试**不在 hvigor 构建图上**（`cpp/CMakeLists.txt` 显式列举源文件），改完 `packet/tunnel/port_map` 后需手动跑一次。
 
 ### 验收标准（2026-09-30 真机通过）
 
@@ -174,6 +182,8 @@ getRemoteByPort(localPort: number): {remoteHost: string, remotePort: number} | n
 | `lib/ui/launch/launch.dart:287-293` | **VPN 模式保活补齐（已实现）**：`_applyOhosKeepAlive()` 原先只在 `serverLaunch` 分支调用；VPN 模式下 FAB 走 `serverLaunch=false` 分支，首次启动不申请长时任务，仅靠 resumed 回调补。已在 `start()` 的 `serverLaunch=false` 分支补调（字段命中 P2 息屏约 1 分钟断 VPN） |
 | `lib/ui/mobile/widgets/remote_device.dart:266-268` | 远程设备 ipProxy 流程调 `Vpn.startVpn(remoteHost, ...)`——隧道栈天然支持，不改；验证阶段覆盖 |
 | `lib/ui/mobile/menu/drawer.dart:399`、`menu.dart:60` | 无需改动，`supportAppFilter()` 放开后入口自动出现；`menu.dart` 仅把图标按平台切成 `phone_android` |
+| `lib/utils/platform.dart` | 新增 `supportProxyPassDomains()`（`!isOhos()`）。鸿蒙 `VpnConfig` 无 `excludeRoutes` 对应物（doc08 R5），该设置填了不生效，故隐藏入口 |
+| `lib/ui/mobile/menu/drawer.dart:306-346`、`bottom_navigation.dart:307-347` | 把「代理转发排除」的 Divider + 输入框整段包进 `if (Platforms.supportProxyPassDomains()) ...[...]`。鸿蒙上设置页不再出现该输入框，Android/桌面端行为不变 |
 
 ### 白名单 UI 降级（`lib/ui/mobile/setting/app_filter.dart`）
 
@@ -199,6 +209,7 @@ getRemoteByPort(localPort: number): {remoteHost: string, remotePort: number} | n
       3. 「+」仍进 `InstalledAppsWidget`：枚举出真实已装应用与真实图标（大众点评 / 58同城 / UC浏览器 / 微信输入法 …），搜索框与"显示系统应用"开关都在
       4. 添加 UC浏览器 → 列表显示真实图标 + 包名；`run-as` 直读 `config.cnf` 确认 `appWhitelist:["com.UCMobile"]`、`appWhitelistEnabled:true` 已落盘
       5. 白名单生效：UC浏览器访问 `portquiz.net:8080` 等 → ProxyPin 出现记录（HTTP/HTTPS 均有，含非标准端口 `:8080` 明文 HTTP 走 port_map 路径）；未列入的 58同城 前台运行 18s → **请求列表零新增**，且该时段 ProxyPin 进程 logcat 中 `wuba|58.com` 匹配数为 0
+- [x] 「代理转发排除」（proxyPassDomains）入口在 ohos 上隐藏（2026-10-07 真机复验）：设置页从「访问控制」直接过渡到「设置/关于」分组，**不再出现「代理忽略域名」输入框**（对照：含该入口的旧构建会显示）。注意 `bm dump` 的 `installTime` 在升级安装后**不更新**（恒为首次安装时间），判断设备上跑的是否为新构建不能看这个字段，须以功能行为为准
 
 ### Android 白/黑名单双向隔离回归（2026-09-30，LIO-AN00 / Android 12 API 31）
 
@@ -223,6 +234,34 @@ ProxyPin 中 `[-2]` 的语义是 `HttpStatus(-2, 'SSL handshake failed, 请检�
 
 即：「内部/cert 构建」不代表「一定可抓」，是否可解密取决于该应用自身的 pinning 配置，需按应用实测。
 
+### P2 复验：息屏后 VPN 存活（2026-09-30，Mate 80 Pro / SGT-AL50，HarmonyOS 6.1.1.120 API 24）
+
+P2（第 0 期发现：息屏约 1 分钟后 netmanager 触发 onDestroy + 进程 terminate）的修复落点是 `launch.dart` 的 VPN 启动分支补 `_applyOhosKeepAlive()`。本轮做修复后的灭屏实测。
+
+起测条件与手法：
+
+- 起 App：`aa start -b com.network.proxy -a EntryAbility`。鸿蒙上 `mobile.dart:129-132` 在 `supportVpn()` 为真时**无条件** `proxyServer.start()`，代理服务常驻 9099，VPN 模式不依赖 `startup` 配置项；
+- 起 VPN：点 FAB（坐标从 PNG 像素算，非目测），hilog 确认 `ProxyPinVpnPlugin: startVpn 127.0.0.1:9099 allow=[com.huawei.hmos.browser] disallow=[]`，随后 `ProxyPinVpnAbility: tun created, fd=29` + `ProxyPinTunnel: tunnel started`，`ifconfig vpn-tun` 出现（10.0.0.2/32，UP），`ps` 出现 `com.network.proxy:vpn`；
+- **保活已生效的直接证据**：首页横幅由「后台保活：未开启，退后台/熄屏后代理可能中断」（灰色 ⓘ）翻转为**「后台保活：长时任务已开启，退后台仍可能被系统限制」（绿勾）**；hilog 同时出现 `SetFlags-final,key=__0_1096_com.network.proxy_bgmode_...`（长时任务通知已挂）；
+- 熄屏存活采样：`power-shell suspend` 后每 30s 采样一次（每轮都先重新 `suspend` 保证真熄屏，再 `hidumper -s 3308 -a -a` 读 Display State、`ps` 读 `:vpn` pid、`ifconfig vpn-tun` 读计数），共 12 轮 ≈ 6 分钟，原始记录如下表。
+
+| 采样 | Display State | `:vpn` pid | vpn-tun RX/TX |
+|---|---|---|---|
+| t=20:10:43（熄屏后 2s） | 0（熄屏） | 54309 | 962 / 796 |
+| t=20:11:15 | 0 | 54309 | **981 / 816** |
+| t=20:11:46 … t=20:16:50（共 11 次） | 0 | 54309 | 981 / 816（空闲无流量） |
+
+- 全程 `hidumper -s 3308 -a -a` 报 `Display Id=0 State=0` 确认真熄屏（同机 `State=2` 为亮屏），`:vpn` pid **恒为 54309 未变**，`vpn-tun` 始终 UP，无 `ProxyPinVpnAbility onDestroy` / `vpn extension stopped` 日志；
+- **熄屏期间隧道仍在双向转发**：RX 962→981 与 TX 796→816 **两端同时增长**，说明报文进了隧道、回包也写回了 tun，白名单内 App 的往返完整走通（白名单只有浏览器，故进 tun 的报文必来自浏览器 → 熄屏期间白名单过滤同样成立）；
+- 旁证：本轮另有一段未控屏的观察，VPN 连续存活 2.5 小时后 pid 依旧 54309。
+
+结论：**P2 已修复**。VPN 模式下申请 dataTransfer 长时任务后，息屏不再触发 VPN 销毁（对照：修复前约 1 分钟内必死）。
+
+两点边界，避免与其它结论混淆：
+
+1. 本节只证「VPN 进程与隧道在熄屏下存活且能转发」。**熄屏期间由外部向 9099 发起的路线 B 请求未单独复测**——doc06 §3.3 的结论（代理服务熄屏下外部 TCP 不可达、应用网络栈被冻结）保持有效，两条结论不冲突：VPN 走系统 VPN 框架（netmanager 持有 extension 进程），冻结策略与普通后台代理进程不同；
+2. 保活的前提是 `proxyServer.isRunning`（`_applyOhosKeepAlive()` 的守卫）。鸿蒙上代理服务由 `mobile.dart:132` 无条常驻，故不构成问题；若日后改为"VPN 可不依赖代理服务"，此守卫需同步调整。
+
 ### 第 2 期真机实测发现
 
 | # | 现象 | 影响与处置 |
@@ -243,7 +282,7 @@ ProxyPin 中 `[-2]` 的语义是 `HttpStatus(-2, 'SSL handshake failed, 请检�
 | R2 | AppGallery 对 VPN/抓包类审核严格 | 高 | **已决策不上架**（2026-09-30）：现阶段以本地开发 + hdc 侧载为准，不再为上架做形态妥协；保留路线 B 作为可回退形态，VPN 能力可摘除 extensionAbilities 段 |
 | R3 | 转发成环 | 中 | PoC 验收项；兜底 `protectProcessNet()` |
 | R4 | 五平台回归 | 中 | 新代码全在 ohos/ 或 `Platforms.isOhos()` 运行时分支；合并前全平台构建验证 |
-| R5 | `proxyPassDomains` CIDR 排除不支持 | 低 | 文档化；ohos 隐藏该 UI 入口 |
+| R5 | `proxyPassDomains` CIDR 排除不支持 | 低 | **已缓解**：`Platforms.supportProxyPassDomains()` 门禁 + `drawer.dart`/`bottom_navigation.dart` 隐藏该输入框（2026-09-30）。`isExcludedRoute`（API 20+）可实现，留待后续迭代 |
 | R6 | UDP 非 DNS（QUIC）被丢弃 | 低 | QUIC 自动回退 TCP；后续迭代补全 |
 | R7 | ExtensionAbility 与 Flutter 引擎通信竞态 | 中 | 配置写静态区 + 事件回调；restartVpn = stop+start |
 
