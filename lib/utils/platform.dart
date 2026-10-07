@@ -71,6 +71,13 @@ class Platforms {
     return !isOhos();
   }
 
+  /// 是否支持"代理转发排除"（proxyPassDomains）
+  /// ohos `VpnConfig` 无 excludeRoutes 对应物，填了也不生效，故隐藏该设置入口
+  /// （harmony/docs/09 风险 R5）
+  static bool supportProxyPassDomains() {
+    return !isOhos();
+  }
+
   /// 判断是否是ipad
   static Future<bool> isIpad() async {
     if (Platform.isIOS) {

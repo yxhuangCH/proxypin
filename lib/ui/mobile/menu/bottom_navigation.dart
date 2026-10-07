@@ -303,46 +303,48 @@ class SettingPage extends StatelessWidget {
                     trailing: const Icon(Icons.keyboard_arrow_right),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => AccessControlPage(configuration: proxyServer.configuration)))),
-                Divider(height: 0, thickness: 0.3, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
-
-                Padding(
-                    padding: const EdgeInsets.only(left: 15),
-                    child: Row(children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(localizations.proxyIgnoreDomain, style: const TextStyle(fontSize: 14)),
-                          const SizedBox(height: 3),
-                          Text(isCN ? "多个使用;分割" : "Use ';' to separate multiple entries",
-                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                        ],
-                      ),
-                      Padding(
-                          padding: const EdgeInsets.only(left: 35),
-                          child: TextButton(
-                            child: Text(localizations.reset),
-                            onPressed: () {
-                              textEditingController.text = SystemProxy.proxyPassDomains;
-                            },
-                          ))
-                    ])),
-                const SizedBox(height: 5),
-                Padding(
-                    padding: const EdgeInsets.only(left: 15, right: 5),
-                    child: TextField(
-                        textInputAction: TextInputAction.done,
-                        style: const TextStyle(fontSize: 13),
-                        controller: textEditingController,
-                        onSubmitted: (_) {
-                          configuration.proxyPassDomains = textEditingController.text;
-                          proxyServer.configuration.flushConfig();
-                        },
-                        decoration: const InputDecoration(
-                          contentPadding: EdgeInsets.all(10),
-                          border: OutlineInputBorder(),
+                // 鸿蒙 VpnConfig 无 excludeRoutes，proxyPassDomains 填了不生效 → 隐藏入口（doc09 R5）
+                if (Platforms.supportProxyPassDomains()) ...[
+                  Divider(height: 0, thickness: 0.3, color: Theme.of(context).dividerColor.withValues(alpha: 0.22)),
+                  Padding(
+                      padding: const EdgeInsets.only(left: 15),
+                      child: Row(children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(localizations.proxyIgnoreDomain, style: const TextStyle(fontSize: 14)),
+                            const SizedBox(height: 3),
+                            Text(isCN ? "多个使用;分割" : "Use ';' to separate multiple entries",
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                          ],
                         ),
-                        maxLines: 5,
-                        minLines: 1)),
+                        Padding(
+                            padding: const EdgeInsets.only(left: 35),
+                            child: TextButton(
+                              child: Text(localizations.reset),
+                              onPressed: () {
+                                textEditingController.text = SystemProxy.proxyPassDomains;
+                              },
+                            ))
+                      ])),
+                  const SizedBox(height: 5),
+                  Padding(
+                      padding: const EdgeInsets.only(left: 15, right: 5),
+                      child: TextField(
+                          textInputAction: TextInputAction.done,
+                          style: const TextStyle(fontSize: 13),
+                          controller: textEditingController,
+                          onSubmitted: (_) {
+                            configuration.proxyPassDomains = textEditingController.text;
+                            proxyServer.configuration.flushConfig();
+                          },
+                          decoration: const InputDecoration(
+                            contentPadding: EdgeInsets.all(10),
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 5,
+                          minLines: 1)),
+                ],
                 // const SizedBox(height: 10),
               ])),
           const SizedBox(height: 12),
