@@ -44,6 +44,7 @@ class MobileRewriteReplace extends StatefulWidget {
 class RewriteReplaceState extends State<MobileRewriteReplace> {
   final _headerKey = GlobalKey<HeadersState>();
   final bodyTextController = CodeForgeController();
+  final FocusNode _bodyFocusNode = FocusNode();
   late FindController findController;
   VoidCallback? _bodyListener;
 
@@ -61,6 +62,7 @@ class RewriteReplaceState extends State<MobileRewriteReplace> {
 
   @override
   void dispose() {
+    _bodyFocusNode.dispose();
     if (_bodyListener != null) {
       bodyTextController.removeListener(_bodyListener!);
       _bodyListener = null;
@@ -235,16 +237,24 @@ class RewriteReplaceState extends State<MobileRewriteReplace> {
               };
               bodyTextController.addListener(_bodyListener!);
 
-              return CodeForge(
-                controller: bodyTextController,
-                findController: findController,
-                lineWrap: true,
-                language: isJsonText() ? langJson : null,
-                enableGuideLines: false,
-                selectionStyle: CodeSelectionStyle(cursorColor: Theme.of(context).colorScheme.primary),
-                editorTheme: Theme.brightnessOf(context) == Brightness.dark ? atomOneDarkTheme : atomOneLightTheme,
-                textStyle: const TextStyle(fontSize: 14),
-                finderBuilder: (c, controller) => FindPanelView(controller: controller),
+              return Listener(
+                onPointerUp: (_) {
+                  _bodyFocusNode.requestFocus();
+                  // CodeForge 已提前 attach 输入连接，鸿蒙上仍需显式唤起输入法。
+                  bodyTextController.connection?.show();
+                },
+                child: CodeForge(
+                  controller: bodyTextController,
+                  focusNode: _bodyFocusNode,
+                  findController: findController,
+                  lineWrap: true,
+                  language: isJsonText() ? langJson : null,
+                  enableGuideLines: false,
+                  selectionStyle: CodeSelectionStyle(cursorColor: Theme.of(context).colorScheme.primary),
+                  editorTheme: Theme.brightnessOf(context) == Brightness.dark ? atomOneDarkTheme : atomOneLightTheme,
+                  textStyle: const TextStyle(fontSize: 14),
+                  finderBuilder: (c, controller) => FindPanelView(controller: controller),
+                ),
               );
             }))
     ]);
