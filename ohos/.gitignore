@@ -2,8 +2,13 @@
 .cxx/
 .build/
 build/
-oh_modules/
-local.properties
+/node_modules
+/oh_modules
+/local.properties
+/package.json
+/package-lock.json
+**/oh-package-lock.json5
+/signing.local.json
 .idea/
 *.har
 .hvigor/

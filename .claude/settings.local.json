@@ -160,7 +160,28 @@
       "Bash(git -C /Users/yxhuang/ai_project/proxypin rev-parse v1.3.3)",
       "Bash(git -C /Users/yxhuang/ai_project/proxypin push -u my release/harmony_1.3.3)",
       "Bash(git -C /Users/yxhuang/ai_project/proxypin push my v1.3.3-harmony)",
-      "Bash(system_profiler SPUSBDataType)"
+      "Bash(system_profiler SPUSBDataType)",
+      "Bash(git check-ignore:*)",
+      "Read(//Users/yxhuang/.ohos/**)",
+      "Read(//Users/yxhuang/.hvigor/**)",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/src/common/common-util.js','utf8'\\); console.log\\(s\\)\")",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/src/utils/build-profile-utils.js','utf8'\\); console.log\\(s\\)\")",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/src/model/project/core-project-model-impl.js','utf8'\\); console.log\\(s\\)\")",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/src/utils/loader/file/project-build-profile-loader.js','utf8'\\); console.log\\(s\\)\")",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/src/model/project/util/command-line-util.js','utf8'\\); console.log\\(s\\)\")",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/src/utils/loader/file/abstract-build-profile-loader.js','utf8'\\); console.log\\(s\\)\")",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/src/const/common-const.js','utf8'\\); console.log\\(s\\)\")",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/src/tasks/sign/sign-util.js','utf8'\\); console.log\\(s\\)\")",
+      "Bash(node:*)",
+      "Bash(git status:*)",
+      "Bash(find /Users/yxhuang/dev/flutter_ohos/packages/flutter_tools/templates/app/ohos.tmpl/entry -name \"oh-package*\" -maxdepth 3 -exec cat {} \\\\;)",
+      "Bash(git rm:*)",
+      "Bash(set +e)",
+      "Bash(bash:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git merge:*)",
+      "Bash(echo \"MERGE_EXIT=$?\")"
     ]
   }
 }
