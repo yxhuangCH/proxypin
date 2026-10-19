@@ -177,7 +177,11 @@
       "Bash(find /Users/yxhuang/dev/flutter_ohos/packages/flutter_tools/templates/app/ohos.tmpl/entry -name \"oh-package*\" -maxdepth 3 -exec cat {} \\\\;)",
       "Bash(git rm:*)",
       "Bash(set +e)",
-      "Bash(bash:*)"
+      "Bash(bash:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git merge:*)",
+      "Bash(echo \"MERGE_EXIT=$?\")"
     ]
   }
 }
