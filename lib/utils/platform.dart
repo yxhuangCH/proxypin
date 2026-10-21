@@ -38,6 +38,12 @@ class Platforms {
     return Platform.isAndroid || Platform.isIOS || isOhos();
   }
 
+  /// 是否支持画中画小窗（Android PiP / ohos PiPWindow）
+  /// ohos：复用 Flutter 渲染面作为 PiP 内容，只读小窗（harmony/docs/10）
+  static bool supportPip() {
+    return Platform.isAndroid || isOhos();
+  }
+
   /// 是否支持系统代理设置（仅桌面端）
   static bool supportSystemProxy() {
     return isDesktop();

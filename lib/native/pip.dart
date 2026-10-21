@@ -45,9 +45,19 @@ class PictureInPicture {
     return exitPictureInPictureMode;
   }
 
+  /// 设置画中画开关（仅 ohos：同步 arm/disarm 原生 PiP 控制器）
+  static Future<void> setEnabled(bool enabled) async {
+    if (!Platforms.isOhos()) return;
+    try {
+      await _channel.invokeMethod('setEnabled', {'enabled': enabled});
+    } catch (e) {
+      logger.w('pip setEnabled failed: $e');
+    }
+  }
+
   ///发送数据
   static Future<bool> addData(String text) async {
-    if (Platforms.isIOS() && inPip) {
+    if ((Platforms.isIOS() || Platforms.isOhos()) && inPip) {
       _channel.invokeMethod('addData', text.fixAutoLines());
     }
     return false;

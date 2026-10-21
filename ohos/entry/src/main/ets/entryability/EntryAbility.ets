@@ -5,6 +5,7 @@ import ProxyPinScanPlugin from '../plugins/ProxyPinScanPlugin';
 import ProxyPinKeepAlivePlugin from '../plugins/ProxyPinKeepAlivePlugin';
 import ProxyPinVpnPlugin from '../plugins/ProxyPinVpnPlugin';
 import ProxyPinProcessInfoPlugin from '../plugins/ProxyPinProcessInfoPlugin';
+import ProxyPinPipPlugin from '../plugins/ProxyPinPipPlugin';
 
 /**
  * ProxyPin 鸿蒙入口 Ability。
@@ -20,5 +21,6 @@ export default class EntryAbility extends FlutterAbility {
     flutterEngine.getPlugins()?.add(new ProxyPinKeepAlivePlugin(this.context));
     flutterEngine.getPlugins()?.add(new ProxyPinVpnPlugin(this.context));
     flutterEngine.getPlugins()?.add(new ProxyPinProcessInfoPlugin());
+    flutterEngine.getPlugins()?.add(new ProxyPinPipPlugin(this.context));
   }
 }

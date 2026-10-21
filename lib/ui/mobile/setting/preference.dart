@@ -9,6 +9,7 @@ import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/configuration.dart';
 import 'package:proxypin/ui/mobile/setting/theme.dart';
 import 'package:proxypin/native/keep_alive.dart';
+import 'package:proxypin/native/pip.dart';
 import 'package:proxypin/utils/platform.dart';
 
 ///设置
@@ -98,7 +99,7 @@ class _PreferenceState extends State<Preference> {
                         configuration.flushConfig();
                       })),
               Divider(height: 0, thickness: 0.3, color: dividerColor),
-              if (Platforms.isAndroid()) ...[
+              if (Platforms.supportPip()) ...[
                 ListTile(
                     title: Text(localizations.windowMode),
                     subtitle: Text(localizations.windowModeSubTitle, style: const TextStyle(fontSize: 12)),
@@ -108,6 +109,7 @@ class _PreferenceState extends State<Preference> {
                         onChanged: (value) {
                           appConfiguration.pipEnabled.value = value;
                           appConfiguration.flushConfig();
+                          PictureInPicture.setEnabled(value);
                         })),
                 Divider(height: 0, thickness: 0.3, color: dividerColor),
               ],
