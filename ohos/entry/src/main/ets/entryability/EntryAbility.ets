@@ -19,8 +19,11 @@ export default class EntryAbility extends FlutterAbility {
     flutterEngine.getPlugins()?.add(new ProxyPinSharePlugin(this.context));
     flutterEngine.getPlugins()?.add(new ProxyPinScanPlugin(this.context));
     flutterEngine.getPlugins()?.add(new ProxyPinKeepAlivePlugin(this.context));
-    flutterEngine.getPlugins()?.add(new ProxyPinVpnPlugin(this.context));
+    const pipPlugin = new ProxyPinPipPlugin(this.context);
+    const vpnPlugin = new ProxyPinVpnPlugin(this.context);
+    vpnPlugin.setPipPlugin(pipPlugin);
+    flutterEngine.getPlugins()?.add(vpnPlugin);
     flutterEngine.getPlugins()?.add(new ProxyPinProcessInfoPlugin());
-    flutterEngine.getPlugins()?.add(new ProxyPinPipPlugin(this.context));
+    flutterEngine.getPlugins()?.add(pipPlugin);
   }
 }

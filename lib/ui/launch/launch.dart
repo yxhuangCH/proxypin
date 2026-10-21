@@ -21,6 +21,7 @@ import 'package:flutter/services.dart';
 import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/native/vpn.dart';
+import 'package:proxypin/native/pip.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/native/keep_alive.dart';
@@ -207,6 +208,12 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
           Vpn.isVpnStarted = value;
           SocketLaunch.startStatus.value = ValueWrap.of(value);
         });
+      }
+
+      // 鸿蒙：重新下发画中画开关（Ability/引擎重建后原生 enabled 状态丢失，
+      // VPN 运行状态由原生 isRunning 查询回调同步，二者 reconcile 决定 arm/disarm）
+      if (Platforms.isOhos()) {
+        PictureInPicture.setEnabled(AppConfiguration.current?.pipEnabled.value ?? false);
       }
     }
 

@@ -94,10 +94,31 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
   private overlay: PipOverlayController | null = null;
   private lines: string[] = [];
   private enabled: boolean = false;
+  private vpnRunning: boolean = false;
   private inPip: boolean = false;
 
   constructor(uiContext: common.UIAbilityContext) {
     this.uiContext = uiContext;
+  }
+
+  /// VPN 状态变化（由 ProxyPinVpnPlugin 注入回调）：与 enabled 共同决定 arm/disarm
+  onVpnStateChanged(running: boolean): void {
+    this.vpnRunning = running;
+    this.reconcile();
+  }
+
+  /// enabled && vpnRunning → arm（预创建控制器 + 允许自动拉起）；否则 disarm
+  private reconcile(): void {
+    if (this.enabled && this.vpnRunning) {
+      if (!PiPWindow.isPiPEnabled()) {
+        return;
+      }
+      this.arm().catch((e: BusinessError) => {
+        hilog.warn(0x0000, TAG, 'arm failed: %{public}d %{public}s', e.code ?? -1, e.message ?? '');
+      });
+    } else {
+      this.disarm();
+    }
   }
 
   onAttachedToEngine(binding: FlutterPluginBinding): void {
@@ -242,7 +263,7 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
 
   private async setEnabled(enabled: boolean, result: MethodResult): Promise<void> {
     this.enabled = enabled;
-    if (!enabled) {
+    if (!enabled || !this.vpnRunning) {
       await this.disarm();
       result.success(null);
       return;

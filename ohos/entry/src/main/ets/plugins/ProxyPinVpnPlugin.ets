@@ -29,6 +29,7 @@ import common from '@ohos.app.ability.common';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import vpntunnel from 'libvpntunnel.so';
+import ProxyPinPipPlugin from './ProxyPinPipPlugin';
 
 const TAG: string = 'ProxyPinVpnPlugin';
 const CHANNEL_NAME: string = 'com.proxy/proxyVpn';
@@ -61,9 +62,15 @@ const tunnel: VpnTunnel = vpntunnel as VpnTunnel;
 export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandler {
   private channel: MethodChannel | null = null;
   private uiContext: common.UIAbilityContext;
+  private pipPlugin: ProxyPinPipPlugin | null = null;
 
   constructor(uiContext: common.UIAbilityContext) {
     this.uiContext = uiContext;
+  }
+
+  /// 注入 PiP 插件：VPN 启停作为画中画 arm/disarm 的驱动源（harmony/docs/10）
+  setPipPlugin(pipPlugin: ProxyPinPipPlugin): void {
+    this.pipPlugin = pipPlugin;
   }
 
   onAttachedToEngine(binding: FlutterPluginBinding): void {
@@ -97,10 +104,14 @@ export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandl
       case 'restartVpn':
         this.restartVpn(call, result);
         break;
-      case 'isRunning':
+      case 'isRunning': {
         // 扩展在独立进程，静态状态不可见（PoC 结论 P1）：经 127.0.0.1 控制通道查询隧道
-        result.success(tunnel.isTunnelRunning());
+        const running: boolean = tunnel.isTunnelRunning();
+        // 冷启动时同步 VPN 初始状态，驱动 PiP arm/disarm
+        this.pipPlugin?.onVpnStateChanged(running);
+        result.success(running);
         break;
+      }
       default:
         result.notImplemented();
         break;
@@ -133,6 +144,7 @@ export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandl
     const want = this.buildWant(proxyHost, proxyPort, allowApps, disallowApps);
     vpnExtension.startVpnExtensionAbility(want).then(() => {
       hilog.info(0x0000, TAG, 'vpn extension started');
+      this.pipPlugin?.onVpnStateChanged(true);
       result.success(true);
     }).catch((e: BusinessError) => {
       // 常见：用户拒绝授权 / 2203002 已有活跃 VPN
@@ -148,6 +160,7 @@ export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandl
     };
     vpnExtension.stopVpnExtensionAbility(want).then(() => {
       hilog.info(0x0000, TAG, 'vpn extension stopped');
+      this.pipPlugin?.onVpnStateChanged(false);
       result.success(true);
     }).catch((e: BusinessError) => {
       hilog.warn(0x0000, TAG, 'stopVpn failed: %{public}d %{public}s', e.code, e.message ?? '');
