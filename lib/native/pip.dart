@@ -62,4 +62,14 @@ class PictureInPicture {
     }
     return false;
   }
+
+  /// 清空小窗最近请求（会话清理时同步，仅 ohos 有原生缓冲）
+  static Future<void> clearData() async {
+    if (!Platforms.isOhos()) return;
+    try {
+      await _channel.invokeMethod('clearData');
+    } catch (e) {
+      logger.w('pip clearData failed: $e');
+    }
+  }
 }

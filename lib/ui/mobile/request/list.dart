@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
+import 'package:proxypin/native/pip.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/channel/channel.dart';
 import 'package:proxypin/network/channel/channel_context.dart';
@@ -154,6 +155,8 @@ class RequestListState extends State<RequestListWidget> {
       domainListKey.currentState?.clean();
       requestSequenceKey.currentState?.clean();
     });
+    // 鸿蒙小窗使用原生缓冲，需同步清空，避免残留已清除的请求
+    PictureInPicture.clearData();
   }
 
   ///清理早期数据

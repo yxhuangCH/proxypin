@@ -174,9 +174,21 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
         result.success(null);
         break;
       }
+      case 'clearData':
+        this.clearLines();
+        result.success(null);
+        break;
       default:
         result.notImplemented();
         break;
+    }
+  }
+
+  /// 清空最近请求缓冲（Dart 侧会话清理时同步，避免小窗残留已清除的条目）
+  private clearLines(): void {
+    this.lines = [];
+    if (this.inPip) {
+      this.overlay?.setLines([]);
     }
   }
 
