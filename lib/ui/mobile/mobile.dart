@@ -188,6 +188,9 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
 
   int exitTime = 0;
 
+  /// PiP 路由是否已由本页面 push（防止重复 push 或误 pop 其他路由）
+  bool _pipRouteShowing = false;
+
   var requestPageNavigatorKey = GlobalKey<NavigatorState>();
   var toolboxNavigatorKey = GlobalKey<NavigatorState>();
   var configNavigatorKey = GlobalKey<NavigatorState>();
@@ -298,7 +301,7 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
       return false;
     }
     if (Vpn.isVpnStarted) {
-      if (!Platforms.isAndroid() || !(await (AppConfiguration.instance)).pipEnabled.value) {
+      if (!Platforms.supportPip() || !(await (AppConfiguration.instance)).pipEnabled.value) {
         return false;
       }
 
@@ -318,7 +321,12 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
 
   @override
   onPictureInPictureModeChanged(bool isInPictureInPictureMode) async {
+    PictureInPicture.inPip = isInPictureInPictureMode;
     if (isInPictureInPictureMode) {
+      if (_pipRouteShowing) {
+        return;
+      }
+      _pipRouteShowing = true;
       Navigator.push(
           context,
           PageRouteBuilder(
@@ -331,7 +339,10 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
     }
 
     if (!isInPictureInPictureMode) {
-      Navigator.maybePop(context);
+      if (_pipRouteShowing) {
+        _pipRouteShowing = false;
+        Navigator.maybePop(context);
+      }
       if (Platforms.supportVpn()) {
         Vpn.isRunning().then((value) {
           Vpn.isVpnStarted = value;

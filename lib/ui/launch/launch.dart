@@ -21,6 +21,7 @@ import 'package:flutter/services.dart';
 import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/native/vpn.dart';
+import 'package:proxypin/native/pip.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/native/keep_alive.dart';
@@ -74,6 +75,13 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
     }
 
     WidgetsBinding.instance.addObserver(this);
+    // 鸿蒙：冷启动的 resumed 事件可能早于观察者注册而丢失，显式下发一次
+    // 画中画开关（配置就绪后），保证 VPN 启动时 reconcile 能 arm
+    if (Platforms.isOhos()) {
+      AppConfiguration.instance.then((config) {
+        PictureInPicture.setEnabled(config.pipEnabled.value);
+      });
+    }
     //启动代理服务器
     if (widget.startup) {
       start();
@@ -206,6 +214,16 @@ class _SocketLaunchState extends State<SocketLaunch> with WindowListener, Widget
         Vpn.isRunning().then((value) {
           Vpn.isVpnStarted = value;
           SocketLaunch.startStatus.value = ValueWrap.of(value);
+        });
+      }
+
+      // 鸿蒙：重新下发画中画开关（Ability/引擎重建后原生 enabled 状态丢失，
+      // VPN 运行状态由原生 isRunning 查询回调同步，二者 reconcile 决定 arm/disarm）。
+      // 冷启动时 resumed 可能早于配置加载完成，必须等 AppConfiguration 就绪，
+      // 否则会以 false 下发导致 PiP 永不 arm
+      if (Platforms.isOhos()) {
+        AppConfiguration.instance.then((config) {
+          PictureInPicture.setEnabled(config.pipEnabled.value);
         });
       }
     }

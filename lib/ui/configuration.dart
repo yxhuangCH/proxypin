@@ -74,10 +74,10 @@ class AppConfiguration {
   bool upgradeNoticeV30 = true;
 
   /// 是否启用画中画
-  ValueNotifier<bool> pipEnabled = ValueNotifier(Platforms.isAndroid());
+  ValueNotifier<bool> pipEnabled = ValueNotifier(Platforms.supportPip());
 
   /// 显示画中画图标
-  ValueNotifier<bool> pipIcon = ValueNotifier(Platforms.isAndroid());
+  ValueNotifier<bool> pipIcon = ValueNotifier(Platforms.supportPip());
 
   /// Headers展示模式: table(逐行) / text(原始文本)
   String headerViewMode = "table";
@@ -209,7 +209,7 @@ class AppConfiguration {
       _language = config['language'] == null
           ? null
           : Locale.fromSubtags(languageCode: config['language'], scriptCode: config['languageScript']);
-      pipEnabled.value = config['pipEnabled'] ?? true;
+      pipEnabled.value = config['pipEnabled'] ?? Platforms.supportPip();
       pipIcon.value = config['pipIcon'] ?? false;
       headerViewMode = config['headerViewMode'] ?? "table";
       bottomNavigation = config['bottomNavigation'] ?? true;

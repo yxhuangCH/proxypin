@@ -181,7 +181,28 @@
       "Bash(git rev-parse:*)",
       "Bash(git rev-list:*)",
       "Bash(git merge:*)",
-      "Bash(echo \"MERGE_EXIT=$?\")"
+      "Bash(echo \"MERGE_EXIT=$?\")",
+      "Bash(mkdir -p /tmp/flutter_har)",
+      "Bash(tar -xzf /Users/yxhuang/ai_project/proxypin/ohos/har/flutter.har -C /tmp/flutter_har)",
+      "Read(//private/tmp/flutter_har/**)",
+      "WebFetch(domain:raw.gitcode.com)",
+      "Bash(find ohos:*)",
+      "WebFetch(domain:gitee.com)",
+      "Bash(./hvigorw assembleHap -p product=default -p buildMode=debug --no-daemon)",
+      "Bash(/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleHap -p product=default -p buildMode=debug --no-daemon)",
+      "Bash(pkill -f \"hdc shell hilog\")",
+      "Bash(ping -c 1 -t 2 192.168.3.188)",
+      "Bash(git -C /Users/yxhuang/ai_project/proxypin log --oneline -5)",
+      "Bash(git:*)",
+      "Bash(echo \"exit_errors=$\\(flutter analyze 2>&1)",
+      "Bash(/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleHap --no-daemon)",
+      "Bash(~/Library/OpenHarmony/Sdk/20/toolchains/hdc shell:*)",
+      "Bash(sed -n 280,340p /Users/yxhuang/ai_project/proxypin/lib/ui/mobile/mobile.dart)",
+      "Bash(sed -n 440,485p /Users/yxhuang/ai_project/proxypin/lib/ui/mobile/mobile.dart)",
+      "Bash(sed -n 118,275p ~/Library/OpenHarmony/Sdk/24/openharmony/ets/api/@ohos.PiPWindow.d.ts)",
+      "Bash(sed -n 650,790p ~/Library/OpenHarmony/Sdk/24/openharmony/ets/api/@ohos.PiPWindow.d.ts)",
+      "Bash(lsof -nP -iTCP:9099 -sTCP:LISTEN)",
+      "Bash(~/Library/OpenHarmony/Sdk/20/toolchains/hdc file:*)"
     ]
   }
 }
