@@ -29,7 +29,7 @@ import common from '@ohos.app.ability.common';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import vpntunnel from 'libvpntunnel.so';
-import ProxyPinPipPlugin, { VpnStopper } from './ProxyPinPipPlugin';
+import ProxyPinPipPlugin, { VpnPipControl } from './ProxyPinPipPlugin';
 
 const TAG: string = 'ProxyPinVpnPlugin';
 const CHANNEL_NAME: string = 'com.proxy/proxyVpn';
@@ -59,10 +59,15 @@ const tunnel: VpnTunnel = vpntunnel as VpnTunnel;
  * - setSystemProxy 无对应系统 API，忽略；
  * - trustedApplications/blockedApplications 互斥，白名单优先（对齐 Dart 取值逻辑）。
  */
-export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandler, VpnStopper {
+export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandler, VpnPipControl {
   private channel: MethodChannel | null = null;
   private uiContext: common.UIAbilityContext;
   private pipPlugin: ProxyPinPipPlugin | null = null;
+  /** 最近一次 startVpn 的入参：供小窗播放键重启 VPN 使用 */
+  private lastProxyHost: string = '127.0.0.1';
+  private lastProxyPort: number = 9099;
+  private lastAllowApps: string[] = [];
+  private lastDisallowApps: string[] = [];
 
   constructor(uiContext: common.UIAbilityContext) {
     this.uiContext = uiContext;
@@ -133,23 +138,30 @@ export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandl
 
   private startVpn(call: MethodCall, result: MethodResult): void {
     const args: ESObject = call.args;
-    const proxyHost: string = (args.get('proxyHost') as string) ?? '127.0.0.1';
-    const proxyPort: number = (args.get('proxyPort') as number) ?? 9099;
-    const allowApps: string[] = (args.get('allowApps') as string[]) ?? [];
-    const disallowApps: string[] = (args.get('disallowApps') as string[]) ?? [];
+    this.lastProxyHost = (args.get('proxyHost') as string) ?? '127.0.0.1';
+    this.lastProxyPort = (args.get('proxyPort') as number) ?? 9099;
+    this.lastAllowApps = (args.get('allowApps') as string[]) ?? [];
+    this.lastDisallowApps = (args.get('disallowApps') as string[]) ?? [];
     hilog.info(0x0000, TAG,
       'startVpn %{public}s:%{public}d allow=[%{public}s] disallow=[%{public}s]',
-      proxyHost, proxyPort, allowApps.join(','), disallowApps.join(','));
+      this.lastProxyHost, this.lastProxyPort, this.lastAllowApps.join(','), this.lastDisallowApps.join(','));
 
-    const want = this.buildWant(proxyHost, proxyPort, allowApps, disallowApps);
+    this.launchVpn(result);
+  }
+
+  /// 启动 VPN 扩展（通道调用与画中画播放键共用）；result 为 null 表示无 Dart 通道回传
+  private launchVpn(result: MethodResult | null): void {
+    const want = this.buildWant(this.lastProxyHost, this.lastProxyPort, this.lastAllowApps, this.lastDisallowApps);
     vpnExtension.startVpnExtensionAbility(want).then(() => {
       hilog.info(0x0000, TAG, 'vpn extension started');
       this.pipPlugin?.onVpnStateChanged(true);
-      result.success(true);
+      result?.success(true);
     }).catch((e: BusinessError) => {
       // 常见：用户拒绝授权 / 2203002 已有活跃 VPN
       hilog.error(0x0000, TAG, 'startVpn failed: %{public}d %{public}s', e.code, e.message ?? '');
-      result.error(`VPN_START_FAILED_${e.code}`, e.message ?? '', null);
+      // 启动失败：校正小窗播放/暂停键状态
+      this.pipPlugin?.onVpnStateChanged(false);
+      result?.error(`VPN_START_FAILED_${e.code}`, e.message ?? '', null);
     });
   }
 
@@ -168,8 +180,14 @@ export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandl
     });
   }
 
-  /// 由画中画挂断键触发（harmony/docs/10）：等价 stopVpn 通道调用，
-  /// 停止后经 onVpnStateChanged(false) 驱动 PiP disarm 退出小窗
+  /// 由画中画暂停键触发（harmony/docs/10）：用最近一次会话配置重启 VPN
+  startVpnFromPip(): void {
+    hilog.info(0x0000, TAG, 'startVpn by pip');
+    this.launchVpn(null);
+  }
+
+  /// 由画中画暂停键触发（harmony/docs/10）：停止后经 onVpnStateChanged(false)
+  /// 更新按钮状态；小窗保持显示，可点播放键重启
   stopVpnFromPip(): void {
     const want: Want = {
       bundleName: this.uiContext.abilityInfo.bundleName,
@@ -180,6 +198,8 @@ export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandl
       this.pipPlugin?.onVpnStateChanged(false);
     }).catch((e: BusinessError) => {
       hilog.warn(0x0000, TAG, 'stopVpnFromPip failed: %{public}d %{public}s', e.code, e.message ?? '');
+      // 停止失败：恢复运行态，校正小窗按钮
+      this.pipPlugin?.onVpnStateChanged(true);
     });
   }
 

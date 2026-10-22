@@ -35,8 +35,10 @@ const LIFECYCLE_CHANNEL_NAME: string = 'com.proxy/appLifecycle';
 /** 小窗保留的最近请求行数 */
 const MAX_LINES: number = 12;
 
-/** 挂断键回调目标：VpnPlugin 显式 implements（ArkTS 不支持结构化类型） */
-export interface VpnStopper {
+/** 控制面板回调目标：VpnPlugin 显式 implements（ArkTS 不支持结构化类型） */
+export interface VpnPipControl {
+  startVpnFromPip(): void;
+
   stopVpnFromPip(): void;
 }
 
@@ -88,7 +90,10 @@ class PipOverlayController extends NodeController {
  * - setAutoStartEnabled(true) 让系统在 Home 手势退后台时自动进入小窗；
  * - stateChange 经 `com.proxy/appLifecycle` 的 `onPictureInPictureModeChanged` 回传 Dart。
  *
- * 已知差异：鸿蒙 PiP 控制面板只支持预定义视频控件，小窗为只读，不提供停止/清理按钮。
+ * 控制面板（对齐 Android 语义，图标受平台预定义控件限制）：
+ * - VIDEO_LIVE 模板 + VIDEO_PLAY_PAUSE：播放/暂停 = 启动/停止 VPN；
+ * - MUTE_SWITCH：系统无垃圾桶图标，以喇叭（静音）图标代替「清空请求」，
+ *   点击后经 cleanSession 通知 Dart 清理会话。
  */
 export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandler {
   private channel: MethodChannel | null = null;
@@ -101,15 +106,15 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
   private enabled: boolean = false;
   private vpnRunning: boolean = false;
   private inPip: boolean = false;
-  private vpnStopper: VpnStopper | null = null;
+  private vpnControl: VpnPipControl | null = null;
 
   constructor(uiContext: common.UIAbilityContext) {
     this.uiContext = uiContext;
   }
 
-  /// 注入 VPN 停止回调（EntryAbility 装配）：挂断键 → 停止 VPN
-  setVpnStopper(vpnStopper: VpnStopper): void {
-    this.vpnStopper = vpnStopper;
+  /// 注入 VPN 启停回调（EntryAbility 装配）：播放/暂停键 → 启动/停止 VPN
+  setVpnControl(vpnControl: VpnPipControl): void {
+    this.vpnControl = vpnControl;
   }
 
   /// VPN 状态变化（由 ProxyPinVpnPlugin 注入回调）：与 enabled 共同决定 arm/disarm
@@ -118,8 +123,11 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
     this.reconcile();
   }
 
-  /// enabled && vpnRunning → arm（预创建控制器 + 允许自动拉起）；否则 disarm
+  /// enabled && vpnRunning → arm（预创建控制器 + 允许自动拉起）；
+  /// VPN 停止时若小窗仍显示则保留窗口（对齐 Android：可点播放键重启），否则 disarm
   private reconcile(): void {
+    hilog.info(0x0000, TAG, 'reconcile enabled=%{public}s vpn=%{public}s inPip=%{public}s',
+      `${this.enabled}`, `${this.vpnRunning}`, `${this.inPip}`);
     if (this.enabled && this.vpnRunning) {
       if (!PiPWindow.isPiPEnabled()) {
         return;
@@ -127,6 +135,9 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
       this.arm().catch((e: BusinessError) => {
         hilog.warn(0x0000, TAG, 'arm failed: %{public}d %{public}s', e.code ?? -1, e.message ?? '');
       });
+    } else if (this.enabled && this.inPip) {
+      this.controller?.setAutoStartEnabled(false);
+      this.updatePlayPauseStatus(false);
     } else {
       this.disarm();
     }
@@ -220,12 +231,38 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
     if (state === PiPWindow.PiPState.STARTED && !this.inPip) {
       this.inPip = true;
       this.overlay?.setLines([...this.lines]);
+      this.updatePlayPauseStatus(this.vpnRunning);
       this.lifecycleChannel?.invokeMethod('onPictureInPictureModeChanged', true);
     } else if ((state === PiPWindow.PiPState.ABOUT_TO_RESTORE || state === PiPWindow.PiPState.STOPPED)
       && this.inPip) {
       this.inPip = false;
       this.lifecycleChannel?.invokeMethod('onPictureInPictureModeChanged', false);
+      // 退出小窗且 VPN 未运行：释放控制器（VPN 运行中则保持 arm，便于再次自动拉起）
+      if (!(this.enabled && this.vpnRunning)) {
+        this.disarm();
+      }
     }
+  }
+
+  /// 同步播放/暂停键状态（running → 暂停图标，stopped → 播放图标），对齐 Android
+  private updatePlayPauseStatus(running: boolean): void {
+    const controller = this.controller;
+    if (controller == null) {
+      return;
+    }
+    try {
+      controller.updatePiPControlStatus(PiPWindow.PiPControlType.VIDEO_PLAY_PAUSE,
+        running ? PiPWindow.PiPControlStatus.PLAY : PiPWindow.PiPControlStatus.PAUSE);
+    } catch (e) {
+      const err = e as BusinessError;
+      hilog.warn(0x0000, TAG, 'updatePiPControlStatus failed: %{public}d %{public}s', err.code ?? -1, err.message ?? '');
+    }
+  }
+
+  /// 小窗「清空」按钮（喇叭图标）：先清本地缓冲（立即反馈），再通知 Dart 清理会话
+  private clearSessionFromPip(): void {
+    this.clearLines();
+    this.channel?.invokeMethod('cleanSession', null);
   }
 
   private async ensureController(): Promise<PiPWindow.PiPController> {
@@ -247,20 +284,35 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
       // 9:19 竖屏比例，对齐 Android Rational(9, 19)
       contentWidth: 640,
       contentHeight: 1350,
-      // 视频通话模板 + 挂断键（红色）：映射为「停止 VPN」。
-      // 鸿蒙控制面板仅支持预定义控件，无法自定义清除按钮（doc10 §2.3）
-      templateType: PiPWindow.PiPTemplateType.VIDEO_CALL,
-      controlGroups: [PiPWindow.VideoCallControlGroup.HANG_UP_BUTTON],
+      // 控制面板仅支持预定义控件（doc10 §2.3）：
+      // - 播放/暂停 = 启动/停止 VPN（图标与 Android 一致）
+      // - 喇叭（静音）图标代替「清空请求」（系统无垃圾桶图标）
+      templateType: PiPWindow.PiPTemplateType.VIDEO_LIVE,
+      controlGroups: [
+        PiPWindow.VideoLiveControlGroup.VIDEO_PLAY_PAUSE,
+        PiPWindow.VideoLiveControlGroup.MUTE_SWITCH,
+      ],
       customUIController: this.overlay,
     };
     const controller = await PiPWindow.create(config, contentNode);
     controller.on('stateChange', (state: PiPWindow.PiPState, reason: string) => {
       this.onPipStateChange(state, reason);
     });
-    controller.on('controlPanelActionEvent', (event: PiPWindow.PiPActionEventType) => {
-      if (event === 'hangUp') {
-        hilog.info(0x0000, TAG, 'pip hangUp → stop vpn');
-        this.vpnStopper?.stopVpnFromPip();
+    controller.on('controlPanelActionEvent', (event: PiPWindow.PiPActionEventType, status?: number) => {
+      if (event === 'playbackStateChanged') {
+        // status 为目标状态：PAUSE → 停止 VPN；PLAY → 启动 VPN
+        if (status === PiPWindow.PiPControlStatus.PAUSE) {
+          hilog.info(0x0000, TAG, 'pip pause → stop vpn');
+          this.updatePlayPauseStatus(false);
+          this.vpnControl?.stopVpnFromPip();
+        } else if (status === PiPWindow.PiPControlStatus.PLAY) {
+          hilog.info(0x0000, TAG, 'pip play → start vpn');
+          this.updatePlayPauseStatus(true);
+          this.vpnControl?.startVpnFromPip();
+        }
+      } else if (event === 'voiceStateChanged') {
+        hilog.info(0x0000, TAG, 'pip mute → clear session');
+        this.clearSessionFromPip();
       }
     });
     this.controller = controller;
@@ -272,6 +324,7 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
   private async arm(): Promise<void> {
     const controller = await this.ensureController();
     controller.setAutoStartEnabled(true);
+    this.updatePlayPauseStatus(this.vpnRunning);
   }
 
   /// 关闭：退出小窗、禁用自动拉起并销毁控制器
@@ -298,6 +351,7 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
   }
 
   private async setEnabled(enabled: boolean, result: MethodResult): Promise<void> {
+    hilog.info(0x0000, TAG, 'setEnabled %{public}s', `${enabled}`);
     this.enabled = enabled;
     if (!enabled || !this.vpnRunning) {
       await this.disarm();
