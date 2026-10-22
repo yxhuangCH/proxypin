@@ -284,6 +284,8 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
       // 9:19 竖屏比例，对齐 Android Rational(9, 19)
       contentWidth: 640,
       contentHeight: 1350,
+      // 默认小窗用小档（1=小，2=大；API 19+）
+      defaultWindowSizeType: 1,
       // 控制面板仅支持预定义控件（doc10 §2.3）：
       // - 播放/暂停 = 启动/停止 VPN（图标与 Android 一致）
       // - 喇叭（静音）图标代替「清空请求」（系统无垃圾桶图标）
