@@ -29,7 +29,7 @@ import common from '@ohos.app.ability.common';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import vpntunnel from 'libvpntunnel.so';
-import ProxyPinPipPlugin from './ProxyPinPipPlugin';
+import ProxyPinPipPlugin, { VpnStopper } from './ProxyPinPipPlugin';
 
 const TAG: string = 'ProxyPinVpnPlugin';
 const CHANNEL_NAME: string = 'com.proxy/proxyVpn';
@@ -59,7 +59,7 @@ const tunnel: VpnTunnel = vpntunnel as VpnTunnel;
  * - setSystemProxy 无对应系统 API，忽略；
  * - trustedApplications/blockedApplications 互斥，白名单优先（对齐 Dart 取值逻辑）。
  */
-export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandler {
+export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandler, VpnStopper {
   private channel: MethodChannel | null = null;
   private uiContext: common.UIAbilityContext;
   private pipPlugin: ProxyPinPipPlugin | null = null;
@@ -165,6 +165,21 @@ export default class ProxyPinVpnPlugin implements FlutterPlugin, MethodCallHandl
     }).catch((e: BusinessError) => {
       hilog.warn(0x0000, TAG, 'stopVpn failed: %{public}d %{public}s', e.code, e.message ?? '');
       result.success(false);
+    });
+  }
+
+  /// 由画中画挂断键触发（harmony/docs/10）：等价 stopVpn 通道调用，
+  /// 停止后经 onVpnStateChanged(false) 驱动 PiP disarm 退出小窗
+  stopVpnFromPip(): void {
+    const want: Want = {
+      bundleName: this.uiContext.abilityInfo.bundleName,
+      abilityName: VPN_ABILITY_NAME,
+    };
+    vpnExtension.stopVpnExtensionAbility(want).then(() => {
+      hilog.info(0x0000, TAG, 'vpn extension stopped by pip');
+      this.pipPlugin?.onVpnStateChanged(false);
+    }).catch((e: BusinessError) => {
+      hilog.warn(0x0000, TAG, 'stopVpnFromPip failed: %{public}d %{public}s', e.code, e.message ?? '');
     });
   }
 

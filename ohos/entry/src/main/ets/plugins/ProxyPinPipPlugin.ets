@@ -35,6 +35,11 @@ const LIFECYCLE_CHANNEL_NAME: string = 'com.proxy/appLifecycle';
 /** 小窗保留的最近请求行数 */
 const MAX_LINES: number = 12;
 
+/** 挂断键回调目标：VpnPlugin 显式 implements（ArkTS 不支持结构化类型） */
+export interface VpnStopper {
+  stopVpnFromPip(): void;
+}
+
 /**
  * 小窗覆盖层：以原生 Text 列表渲染最近请求 URL。
  * PiP customUIController 为覆盖在内容之上的自定义布局（只读、不可交互）。
@@ -96,9 +101,15 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
   private enabled: boolean = false;
   private vpnRunning: boolean = false;
   private inPip: boolean = false;
+  private vpnStopper: VpnStopper | null = null;
 
   constructor(uiContext: common.UIAbilityContext) {
     this.uiContext = uiContext;
+  }
+
+  /// 注入 VPN 停止回调（EntryAbility 装配）：挂断键 → 停止 VPN
+  setVpnStopper(vpnStopper: VpnStopper): void {
+    this.vpnStopper = vpnStopper;
   }
 
   /// VPN 状态变化（由 ProxyPinVpnPlugin 注入回调）：与 enabled 共同决定 arm/disarm
@@ -142,6 +153,7 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
     }
     this.lifecycleChannel = null;
     this.controller?.off('stateChange');
+    this.controller?.off('controlPanelActionEvent');
     this.controller = null;
     this.xcompController = null;
     this.overlay = null;
@@ -232,13 +244,24 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
     const config: PiPWindow.PiPConfiguration = {
       context: this.uiContext,
       componentController: this.xcompController,
-      contentWidth: 1080,
-      contentHeight: 640,
+      // 9:19 竖屏比例，对齐 Android Rational(9, 19)
+      contentWidth: 640,
+      contentHeight: 1350,
+      // 视频通话模板 + 挂断键（红色）：映射为「停止 VPN」。
+      // 鸿蒙控制面板仅支持预定义控件，无法自定义清除按钮（doc10 §2.3）
+      templateType: PiPWindow.PiPTemplateType.VIDEO_CALL,
+      controlGroups: [PiPWindow.VideoCallControlGroup.HANG_UP_BUTTON],
       customUIController: this.overlay,
     };
     const controller = await PiPWindow.create(config, contentNode);
     controller.on('stateChange', (state: PiPWindow.PiPState, reason: string) => {
       this.onPipStateChange(state, reason);
+    });
+    controller.on('controlPanelActionEvent', (event: PiPWindow.PiPActionEventType) => {
+      if (event === 'hangUp') {
+        hilog.info(0x0000, TAG, 'pip hangUp → stop vpn');
+        this.vpnStopper?.stopVpnFromPip();
+      }
     });
     this.controller = controller;
     hilog.info(0x0000, TAG, 'pip controller created');
@@ -267,6 +290,7 @@ export default class ProxyPinPipPlugin implements FlutterPlugin, MethodCallHandl
       hilog.warn(0x0000, TAG, 'disarm failed: %{public}d %{public}s', err.code ?? -1, err.message ?? '');
     }
     controller.off('stateChange');
+    controller.off('controlPanelActionEvent');
     this.controller = null;
     this.xcompController = null;
     this.overlay = null;
