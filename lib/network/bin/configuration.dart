@@ -21,6 +21,7 @@ import 'package:proxypin/network/channel/host_port.dart';
 import 'package:proxypin/network/util/file_read.dart';
 import 'package:proxypin/network/components/host_filter.dart';
 import 'package:proxypin/network/util/logger.dart';
+import 'package:proxypin/network/util/random.dart';
 import 'package:proxypin/network/util/system_proxy.dart';
 import 'package:proxypin/utils/platform.dart';
 
@@ -72,6 +73,10 @@ class Configuration {
   String proxyAuthUsername = '';
   String proxyAuthPassword = '';
 
+  //Web 控制台：浏览器访问抓包数据（默认关闭）
+  bool webConsoleEnabled = false;
+  String webConsoleToken = '';
+
   Configuration._();
 
   /// 单例
@@ -112,6 +117,8 @@ class Configuration {
     proxyAuthEnabled = config['proxyAuthEnabled'] ?? false;
     proxyAuthUsername = config['proxyAuthUsername'] ?? '';
     proxyAuthPassword = config['proxyAuthPassword'] ?? '';
+    webConsoleEnabled = config['webConsoleEnabled'] ?? false;
+    webConsoleToken = config['webConsoleToken'] ?? '';
     HostFilter.whitelist.load(config['whitelist']);
     HostFilter.blacklist.load(config['blacklist']);
   }
@@ -121,6 +128,14 @@ class Configuration {
     var separator = Platform.pathSeparator;
     var home = await FileRead.homeDir();
     return File("${home.path}${separator}config.cnf");
+  }
+
+  /// 确保 Web 控制台 token 存在（首次开启时生成）
+  String ensureWebConsoleToken() {
+    if (webConsoleToken.isEmpty) {
+      webConsoleToken = RandomUtil.randomString(32);
+    }
+    return webConsoleToken;
   }
 
   /// 刷新配置文件
@@ -167,6 +182,8 @@ class Configuration {
       'proxyAuthEnabled': proxyAuthEnabled,
       'proxyAuthUsername': proxyAuthUsername,
       'proxyAuthPassword': proxyAuthPassword,
+      'webConsoleEnabled': webConsoleEnabled,
+      'webConsoleToken': webConsoleToken,
       'historyCacheTime': historyCacheTime,
       'enabledHttp2': enabledHttp2,
       'whitelist': HostFilter.whitelist.toJson(),

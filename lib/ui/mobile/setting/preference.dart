@@ -8,6 +8,7 @@ import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/configuration.dart';
 import 'package:proxypin/ui/mobile/setting/theme.dart';
+import 'package:proxypin/ui/mobile/setting/web_console.dart';
 import 'package:proxypin/native/keep_alive.dart';
 import 'package:proxypin/native/pip.dart';
 import 'package:proxypin/utils/platform.dart';
@@ -169,6 +170,16 @@ class _PreferenceState extends State<Preference> {
                         appConfiguration.clearConfirm = value;
                         appConfiguration.flushConfig();
                       })),
+            ]),
+            const SizedBox(height: 12),
+            section([
+              ListTile(
+                  title: Text(_isCN ? 'Web 控制台' : 'Web Console'),
+                  subtitle: Text(_isCN ? '浏览器访问手机抓包数据（默认关闭）' : 'Browse captured traffic from a browser (off by default)',
+                      style: const TextStyle(fontSize: 12)),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => WebConsoleSettingPage(proxyServer: proxyServer)))),
             ]),
             const SizedBox(height: 12),
             section([

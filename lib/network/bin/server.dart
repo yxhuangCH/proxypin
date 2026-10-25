@@ -25,6 +25,7 @@ import 'package:proxypin/network/components/report_server_interceptor.dart';
 import 'package:proxypin/network/components/request_block.dart';
 import 'package:proxypin/network/components/request_rewrite.dart';
 import 'package:proxypin/network/components/script.dart';
+import 'package:proxypin/network/console/console_store.dart';
 import 'package:proxypin/network/handle/http_proxy_handle.dart';
 import 'package:proxypin/network/util/crts.dart';
 import 'package:proxypin/utils/platform.dart';
@@ -52,11 +53,16 @@ class ProxyServer {
   //请求事件监听
   List<EventListener> listeners = [];
 
+  //Web 控制台抓包存储（独立于 Flutter UI）
+  final ConsoleCaptureStore consoleStore = ConsoleCaptureStore();
+
   //配置
   final Configuration configuration;
 
   ProxyServer(this.configuration) {
     current = this;
+    ConsoleCaptureStore.current = consoleStore;
+    addListener(consoleStore);
   }
 
   //是否启动
