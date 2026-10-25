@@ -364,6 +364,28 @@ void main() {
       expect(response?.status.code, 400);
     });
 
+    test('从记录预填请求改写规则（无响应也可）', () async {
+      var store = ConsoleCaptureStore();
+      var req = HttpRequest(HttpMethod.post, 'http://example.com/api/user?id=1')
+        ..requestId = 'a'
+        ..body = utf8.encode('{"name":"x"}');
+      req.headers.set('Content-Type', 'application/json');
+      store.addRequest(req);
+
+      var response = await WebConsole.route(
+          request('/api/console/requests/a/rewrite?token=secret-token&type=requestReplace', method: HttpMethod.post),
+          configuration: config(),
+          store: store);
+      expect(response?.status.code, 200);
+
+      var payload = jsonDecode(utf8.decode(response!.body!));
+      expect(payload['type'], RuleType.requestReplace.name);
+      expect(payload['url'], 'http://example.com/api/user');
+      expect(payload['method'], 'POST');
+      var types = (payload['items'] as List).map((e) => e['type']).toList();
+      expect(types, containsAll(['replaceRequestLine', 'replaceRequestHeader', 'replaceRequestBody']));
+    });
+
     test('构造重写规则与条目', () {
       var rule = WebConsole.buildRewriteRule({
         'enabled': true,

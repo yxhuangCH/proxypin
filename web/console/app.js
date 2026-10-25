@@ -383,51 +383,89 @@
     return lines.join(' \\\n');
   }
 
+  let detailTab = 'request'; // 详情区 Tab：request / response（对齐鸿蒙 App）
+
+  function queryParamsOf(url) {
+    try {
+      const params = [];
+      new URL(url).searchParams.forEach((value, name) => params.push([name, value]));
+      return params;
+    } catch (_) {
+      return [];
+    }
+  }
+
   function renderDetail(detail) {
     lastDetail = detail;
     clear(detailEl);
 
     const response = detail.response;
-    const statusText = response ? response.status?.code : null;
 
     const toolbar = el('div', {class: 'toolbar'},
         el('button', {text: '复制 URL', onclick: () => copy(detail.url, 'URL')}),
         el('button', {text: '复制 cURL', onclick: () => copy(toCurl(detail), 'cURL')}),
         el('button', {text: '原样重发', onclick: () => repeatRequest(detail.id)}),
         el('button', {text: '编辑后发送', onclick: () => openSendDialog(detail)}),
-        el('button', {text: '创建响应改写规则', onclick: () => prefillRewrite(detail.id)}),
     );
+
+    const tabBar = el('div', {class: 'detail-tabs'},
+        [['request', 'Request'], ['response', 'Response']].map(([key, label]) =>
+            el('button', {
+              class: 'tab' + (detailTab === key ? ' active' : ''),
+              text: label,
+              onclick: () => {
+                detailTab = key;
+                renderDetail(detail);
+              },
+            })));
 
     detailEl.append(
-        el('h3', {text: detail.method + ' ' + detail.url}),
+        el('div', {class: 'detail-title', text: detail.method + ' ' + detail.url, title: detail.url}),
         toolbar,
-        el('h3', {text: 'General'}),
-        kvTable([
-          ['方法', detail.method],
-          ['URL', detail.url],
-          ['状态', statusText == null ? '（等待响应）' : statusText + ' ' + (response.status.reasonPhrase || '')],
-          ['耗时', formatCost(detail.costTime)],
-          ['请求大小', formatBytes(detail.requestSize)],
-          ['响应大小', formatBytes(detail.responseSize)],
-          ['请求时间', detail.requestTime ? new Date(detail.requestTime).toLocaleString() : ''],
-          ['协议', detail.request.protocolVersion],
-        ]),
-        el('h3', {text: '请求头'}),
-        headerTable(detail.request.headers),
-        el('h3', {text: '请求体'}),
-        bodyView(detail.request.body),
-    );
+        tabBar);
 
-    if (response) {
-      detailEl.append(
-          el('h3', {text: '响应头'}),
-          headerTable(response.headers),
-          el('h3', {text: '响应体'}),
-          bodyView(response.body),
-      );
-    } else {
-      detailEl.append(el('h3', {text: '响应'}), el('div', {class: 'muted', text: '（尚未收到响应）'}));
+    if (detailTab === 'request') {
+      // Request tab：Path / 请求参数 / 请求头 / 请求体，可编辑（生成 requestReplace 规则）
+      const children = [
+        kvTable([
+          ['Path', detail.path],
+          ['请求时间', detail.requestTime ? new Date(detail.requestTime).toLocaleString() : ''],
+          ['请求大小', formatBytes(detail.requestSize)],
+        ]),
+      ];
+      const params = queryParamsOf(detail.url);
+      if (params.length > 0) {
+        children.push(el('h3', {text: '请求参数'}), kvTable(params));
+      }
+      children.push(
+          el('h3', {text: '请求头'}),
+          headerTable(detail.request.headers),
+          el('div', {class: 'body-head'},
+              el('h3', {text: '请求体'}),
+              el('button', {text: '编辑（请求重写）', onclick: () => prefillRewrite(detail.id, 'requestReplace')})),
+          bodyView(detail.request.body));
+      detailEl.append(children);
+      return;
     }
+
+    // Response tab：状态码 / 响应头 / 响应体，可编辑（生成 responseReplace 规则）
+    if (!response) {
+      detailEl.append(el('div', {class: 'placeholder muted', text: '（尚未收到响应）'}));
+      return;
+    }
+    detailEl.append(
+        kvTable([
+          ['状态码', response.status?.code + ' ' + (response.status?.reasonPhrase || '')],
+          ['耗时', formatCost(detail.costTime)],
+          ['响应大小', formatBytes(detail.responseSize)],
+          ['响应时间', detail.responseTime ? new Date(detail.responseTime).toLocaleString() : ''],
+        ]),
+        el('h3', {text: '响应头'}),
+        headerTable(response.headers),
+        el('div', {class: 'body-head'},
+            el('h3', {text: '响应体'}),
+            el('button', {text: '编辑（响应重写）', onclick: () => prefillRewrite(detail.id, 'responseReplace')})),
+        bodyView(response.body));
   }
 
   async function selectRequest(id) {
@@ -640,17 +678,18 @@
       ruleTitle.textContent = '编辑改写规则';
       editingRule = JSON.parse(JSON.stringify(rewrites.rules[index]));
     }
-    // 非响应类规则（请求替换/修改、重定向）暂不支持表单，直接 JSON 模式
-    jsonMode = !RESPONSE_RULE_TYPES.includes(editingRule.type);
+    // 表单不支持的规则类型（修改请求/重定向等）直接 JSON 模式
+    jsonMode = !FORM_RULE_TYPES.includes(editingRule.type);
     ruleJson.value = JSON.stringify(editingRule, null, 2);
     renderRuleFields();
     applyJsonMode();
     ruleDialog.showModal();
   }
 
-  async function prefillRewrite(id) {
+  async function prefillRewrite(id, type) {
     try {
-      const template = await postJson('/api/console/requests/' + encodeURIComponent(id) + '/rewrite');
+      const template = await postJson('/api/console/requests/' + encodeURIComponent(id) + '/rewrite' +
+          (type ? '?type=' + encodeURIComponent(type) : ''));
       await loadRewrites();
       rewritesDialog.showModal();
       openRuleDialog(null, template);
@@ -662,7 +701,9 @@
   // ---------- 规则表单（与鸿蒙 App 编辑页对齐：responseReplace 三分区 / responseUpdate 改写项列表） ----------
   const ruleFields = document.getElementById('rule-fields');
   const ruleJsonToggle = document.getElementById('rule-json-toggle');
-  const RESPONSE_RULE_TYPES = ['responseReplace', 'responseUpdate'];
+  // 表单支持的规则类型（其余类型走 JSON 高级编辑）
+  const FORM_RULE_TYPES = ['requestReplace', 'responseReplace', 'responseUpdate'];
+  const RULE_TYPE_LABELS = {requestReplace: '替换请求', responseReplace: '替换响应', responseUpdate: '修改响应'};
   const UPDATE_ITEM_TYPES = [
     ['updateBody', '修改Body'],
     ['addHeader', '添加头部'],
@@ -680,7 +721,7 @@
     ruleFields.hidden = jsonMode;
     ruleJson.hidden = !jsonMode;
     ruleJsonToggle.classList.toggle('primary', jsonMode);
-    ruleJsonToggle.disabled = !RESPONSE_RULE_TYPES.includes(editingRule?.type);
+    ruleJsonToggle.disabled = !FORM_RULE_TYPES.includes(editingRule?.type);
     ruleJsonToggle.title = ruleJsonToggle.disabled ? '该类型规则仅支持 JSON 编辑' : '切换 JSON 高级编辑';
   }
 
@@ -697,8 +738,8 @@
 
     // 类型 + 方法
     const typeSelect = el('select', {id: 'rf-type'},
-        RESPONSE_RULE_TYPES.map((t) => el('option', {value: t, text: t === 'responseReplace' ? '替换响应' : '修改响应'})));
-    typeSelect.value = RESPONSE_RULE_TYPES.includes(rule.type) ? rule.type : 'responseReplace';
+        FORM_RULE_TYPES.map((t) => el('option', {value: t, text: RULE_TYPE_LABELS[t] || t})));
+    typeSelect.value = FORM_RULE_TYPES.includes(rule.type) ? rule.type : 'responseReplace';
     typeSelect.addEventListener('change', () => {
       rule.type = typeSelect.value;
       renderItemsSection();
@@ -730,8 +771,66 @@
     if (!container) return;
     clear(container);
     const rule = editingRule;
-    if (rule.type === 'responseReplace') renderReplaceSections(container, rule);
+    if (rule.type === 'requestReplace') renderRequestReplaceSections(container, rule);
+    else if (rule.type === 'responseReplace') renderReplaceSections(container, rule);
     else if (rule.type === 'responseUpdate') renderUpdateSections(container, rule);
+  }
+
+  // 替换请求：请求行（方法/Path/URL参数）/ 请求头 / 请求体 三个分区（对齐 App 的请求 Tab）
+  function renderRequestReplaceSections(container, rule) {
+    const lineItem = findItem(rule, 'replaceRequestLine');
+    const headerItem = findItem(rule, 'replaceRequestHeader');
+    const bodyItem = findItem(rule, 'replaceRequestBody');
+
+    // 请求行：留空表示该项不修改（对应后端 item.method ?? request.method / Uri.replace 的 null 语义）
+    const lineBox = el('input', {type: 'checkbox', id: 'rf-line-enabled'});
+    lineBox.checked = lineItem?.enabled === true;
+    const methodSelect = el('select', {id: 'rf-line-method'},
+        ['', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
+            .map((m) => el('option', {value: m, text: m || '不改'})));
+    methodSelect.value = lineItem?.values?.method || '';
+    const pathInput = el('input', {type: 'text', id: 'rf-line-path', spellcheck: 'false',
+        placeholder: 'Path，例如 /api/v1/user（留空不改）'});
+    pathInput.value = lineItem?.values?.path || '';
+    const queryInput = el('input', {type: 'text', id: 'rf-line-query', spellcheck: 'false',
+        placeholder: 'URL参数，例如 id=1&name=2（留空不改）'});
+    queryInput.value = lineItem?.values?.queryParam || '';
+
+    // 请求头
+    const headerBox = el('input', {type: 'checkbox', id: 'rf-req-header-enabled'});
+    headerBox.checked = headerItem?.enabled === true;
+    const headerRows = el('div', {id: 'rf-req-header-rows'});
+    const headers = headerItem?.values?.headers || {};
+    for (const [name, value] of Object.entries(headers)) addHeaderRow(headerRows, name, value);
+    if (Object.keys(headers).length === 0) addHeaderRow(headerRows, '', '');
+
+    // 请求体（同响应体：Web 只支持文本；文件型保留原值）
+    const bodyBox = el('input', {type: 'checkbox', id: 'rf-req-body-enabled'});
+    bodyBox.checked = bodyItem ? bodyItem.enabled !== false : true;
+    const isFileBody = bodyItem?.values?.bodyType === 'file';
+    const bodyArea = el('textarea', {id: 'rf-req-body', rows: '8', spellcheck: 'false',
+        placeholder: '{"key":"value"}'});
+    bodyArea.value = isFileBody ? '' : (bodyItem?.values?.body || '');
+
+    container.append(
+        el('div', {class: 'rw-section'},
+            el('div', {class: 'rw-head'},
+                el('label', null, lineBox, el('span', {text: '替换请求行'}))),
+            el('div', {class: 'rf-row'},
+                el('label', {class: 'fld'}, el('span', {text: '方法'}), methodSelect)),
+            pathInput,
+            queryInput),
+        el('div', {class: 'rw-section'},
+            el('div', {class: 'rw-head'},
+                el('label', null, headerBox, el('span', {text: '替换请求头'})),
+                el('button', {type: 'button', text: '+ 添加', onclick: () => addHeaderRow(headerRows, '', '')})),
+            headerRows),
+        el('div', {class: 'rw-section'},
+            el('div', {class: 'rw-head'},
+                el('label', null, bodyBox, el('span', {text: '替换请求体'}))),
+            isFileBody
+                ? el('p', {class: 'muted', text: '当前为文件型 body（' + (bodyItem.values.bodyFile || '') + '），Web 端不支持编辑，保存时保留原配置。'})
+                : bodyArea));
   }
 
   // 替换响应：状态码 / 响应头 / 响应体 三个分区，各自带启用开关（对齐 App 的三个 Tab）
@@ -856,6 +955,44 @@
     if (method) rule.method = method;
     if (!rule.url) throw new Error('请填写 URL');
 
+    if (rule.type === 'requestReplace') {
+      const lineItem = findItem(editingRule, 'replaceRequestLine');
+      const headerItem = findItem(editingRule, 'replaceRequestHeader');
+      const bodyItem = findItem(editingRule, 'replaceRequestBody');
+
+      // 空输入 → null，后端 null 表示该项不修改
+      const lineMethod = ruleFields.querySelector('#rf-line-method').value || null;
+      const linePath = ruleFields.querySelector('#rf-line-path').value.trim() || null;
+      const lineQuery = ruleFields.querySelector('#rf-line-query').value.trim() || null;
+
+      const headers = {};
+      for (const row of ruleFields.querySelectorAll('#rf-req-header-rows .kv-row')) {
+        const name = row.children[0].value.trim();
+        if (!name) continue;
+        headers[name] = row.children[1].value;
+      }
+
+      const bodyItemOut = {enabled: ruleFields.querySelector('#rf-req-body-enabled').checked,
+          type: 'replaceRequestBody', values: Object.assign({}, bodyItem?.values)};
+      if (bodyItem?.values?.bodyType === 'file') {
+        // 文件型 body：保留原配置
+      } else {
+        bodyItemOut.values.body = ruleFields.querySelector('#rf-req-body').value;
+        bodyItemOut.values.bodyType = 'text';
+        delete bodyItemOut.values.bodyFile;
+      }
+
+      rule.items = [
+        {enabled: ruleFields.querySelector('#rf-line-enabled').checked, type: 'replaceRequestLine',
+            values: Object.assign({}, lineItem?.values,
+                {method: lineMethod, path: linePath, queryParam: lineQuery})},
+        {enabled: ruleFields.querySelector('#rf-req-header-enabled').checked, type: 'replaceRequestHeader',
+            values: Object.assign({}, headerItem?.values, {headers: headers})},
+        bodyItemOut,
+      ];
+      return rule;
+    }
+
     if (rule.type === 'responseReplace') {
       const statusItem = findItem(editingRule, 'replaceResponseStatus');
       const headerItem = findItem(editingRule, 'replaceResponseHeader');
@@ -937,7 +1074,7 @@
         if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
           throw new Error('规则必须是 JSON 对象');
         }
-        if (!RESPONSE_RULE_TYPES.includes(parsed.type)) {
+        if (!FORM_RULE_TYPES.includes(parsed.type)) {
           throw new Error('该类型规则仅支持 JSON 编辑');
         }
         editingRule = parsed;

@@ -467,3 +467,24 @@ Web 端改写规则编辑由裸 JSON textarea 改为与 App 编辑页一致的�
 - **域名列表**：按 `host` 聚合，显示域名、请求数、最后请求时间，最近活跃的域名排顶部；点击域名下钻该域名的请求列表（顶部返回行），再点请求照常看详情；
 - 顶部过滤框在两个 Tab 下均生效：域名 Tab 过滤域名，全部/下钻过滤请求；
 - 清空、增量轮询、选中态在两种视图下保持一致；无后端改动（复用列表摘要里的 `host` 字段）。
+
+## 15. USB 接入（hdc fport，2026-10-25）
+
+公司 WiFi 客户端隔离、手机与电脑无法直连时，走 USB 端口转发，代理流量与控制台流量共用一条转发：
+
+- 手机开开发者模式 + USB 调试；电脑执行 `hdc fport tcp:9099 tcp:9099` 后，浏览器代理设 `127.0.0.1:9099`，控制台访问 `http://127.0.0.1:9099/console?token=...`；
+- 现有代码零改动即可用：本地分支显式匹配 `127.0.0.1`（`lib/network/handle/http_proxy_handle.dart:39`），访问控制对回环始终放行（`lib/network/components/access_control.dart:16`）；
+- 附带收益：`127.0.0.1` 是安全上下文，`navigator.clipboard` 直接可用；
+- 启动器支持：`serve.py` 新增 `transport=usb` 配置（`PROXYPIN_TRANSPORT=usb` / `.console_config.json` 的 `transport`），启动时自动定位 hdc（PATH → 常见安装路径 → `HDC` 环境变量）、检测 `hdc list targets`、幂等建立 `hdc fport`；本机转发端口冲突时用 `PROXYPIN_USB_LOCAL_PORT` 更换；`启动控制台.command` 首次运行可选 WiFi/USB 模式；
+- App 设置页「Web 控制台」新增 USB 连接说明块（hdc 命令一键复制）；
+- 限制：公司 Windows 电脑首次可能要装华为 USB 驱动（可能需管理员）；以 `hdc list targets` 能否识别设备为准。
+
+## 16. 详情区 Request/Response 双 Tab + 请求编辑（2026-10-25）
+
+右栏详情对齐鸿蒙 App 的 `NetworkTabController`，拆成 Request / Response 两个 Tab，且两边都可编辑：
+
+- Request Tab：Path / 请求时间 / 请求大小、请求参数（URL query 拆表）、请求头、请求体；「编辑（请求重写）」按钮以该请求预填 `requestReplace` 规则；
+- Response Tab：状态码 / 耗时 / 响应大小 / 响应时间、响应头、响应体；「编辑（响应重写）」按钮预填 `responseReplace` 规则；响应未到达时显示占位；
+- 后端 `/api/console/requests/{id}/rewrite` 新增 `?type=requestReplace` 查询参数：走 `RewriteItem.fromRequest` 生成 `replaceRequestLine` / `replaceRequestHeader` / `replaceRequestBody` 预填项，且不要求响应已到达（默认无参仍返回 `responseReplace`，行为不变）；
+- 规则编辑器表单新增 `requestReplace` 类型：请求行（方法下拉「不改/GET/...」+ Path + URL参数，留空序列化为 `null`，对应后端 `item.method ?? request.method` 与 `Uri.replace` 的空值语义）/ 请求头（键值行）/ 请求体（文本，文件型只读保留）三个分区，与响应侧结构一致；
+- 注意：该接口变更在手机端 Dart 代码中，旧版本 App 会忽略 `?type=` 回退为响应替换预填；需重新构建安装 App 后才生效。前端经 `serve.py` 直连仓库 `web/console/`，无需重新打包。

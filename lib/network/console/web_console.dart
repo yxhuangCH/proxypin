@@ -287,15 +287,17 @@ class WebConsole {
     return sendRequest;
   }
 
-  /// 从选中请求预填响应改写规则（前端确认后再 POST /rewrites 落盘）
+  /// 从抓包记录预填改写规则：默认 responseReplace（编辑响应），?type=requestReplace 时编辑请求。
+  /// 与 App 详情页 body 上的「请求重写」入口一致（lib/ui/content/body.dart showRequestRewrite）。
   static HttpResponse _prefillRewrite(HttpRequest request, ConsoleCaptureStore store, String id,
       {String? setCookie}) {
     var entry = store.get(id);
     if (entry == null) {
       return _jsonResponse(request, HttpStatus.notFound, {'error': 'request not found'}, setCookie: setCookie);
     }
-    var response = entry.response;
-    if (response == null) {
+
+    var forRequest = request.queries['type'] == RuleType.requestReplace.name;
+    if (!forRequest && entry.response == null) {
       return _jsonResponse(request, HttpStatus.badRequest, {'error': 'response not captured yet'},
           setCookie: setCookie);
     }
@@ -306,10 +308,14 @@ class WebConsole {
         {
           'name': '${entry.request.method.name} ${entry.request.path}',
           'enabled': true,
-          'type': RuleType.responseReplace.name,
+          'type': forRequest ? RuleType.requestReplace.name : RuleType.responseReplace.name,
           'url': entry.request.domainPath,
           'method': entry.request.method.name,
-          'items': RewriteItem.fromResponse(response).map((e) => e.toJson()).toList(),
+          'items': (forRequest
+                  ? RewriteItem.fromRequest(entry.request)
+                  : RewriteItem.fromResponse(entry.response!))
+              .map((e) => e.toJson())
+              .toList(),
         },
         setCookie: setCookie);
   }

@@ -230,7 +230,11 @@
       "Bash(chmod +x /Users/yxhuang/ai_project/proxypin/web/启动控制台.command)",
       "Bash(pkill -f \"PROXYPIN_LOCAL_PORT=18899\")",
       "Bash(pkill -f \"web/serve.py\")",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(PROXYPIN_NO_BROWSER=1 PROXYPIN_TRANSPORT=usb PROXYPIN_USB_LOCAL_PORT=19099 PROXYPIN_TOKEN=dummy PROXYPIN_LOCAL_PORT=8894 timeout 6 python3 serve.py)",
+      "Bash(lsof -nP -iTCP:8899 -sTCP:LISTEN)",
+      "Bash(PROXYPIN_NO_BROWSER=1 python3 serve.py)",
+      "Bash(kill 8991)"
     ]
   }
 }
