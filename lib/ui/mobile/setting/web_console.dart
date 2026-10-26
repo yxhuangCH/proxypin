@@ -7,6 +7,7 @@ import 'package:proxypin/network/util/random.dart';
 import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/ui/mobile/setting/access_control.dart';
 import 'package:proxypin/utils/ip.dart';
+import 'package:proxypin/utils/platform.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 /// Web 控制台设置：浏览器访问手机抓包数据。
@@ -53,7 +54,11 @@ class _WebConsoleSettingPageState extends State<WebConsoleSettingPage> {
   String get _usbConsoleUrl =>
       'http://127.0.0.1:${widget.proxyServer.port}/console?token=${configuration.webConsoleToken}';
 
-  String get _hdcCommand => 'hdc fport tcp:${widget.proxyServer.port} tcp:${widget.proxyServer.port}';
+  /// USB 端口转发命令：Android 用 adb forward，鸿蒙用 hdc fport
+  String get _usbForwardCommand {
+    var port = widget.proxyServer.port;
+    return Platforms.isAndroid() ? 'adb forward tcp:$port tcp:$port' : 'hdc fport tcp:$port tcp:$port';
+  }
 
   void _toggle(bool enabled) {
     configuration.webConsoleEnabled = enabled;
@@ -195,16 +200,16 @@ class _WebConsoleSettingPageState extends State<WebConsoleSettingPage> {
                       child: SelectableText(
                           _isCN
                               ? '1. 手机开开发者模式与 USB 调试，数据线连电脑\n'
-                                  '2. 电脑执行：$_hdcCommand\n'
+                                  '2. 电脑执行：$_usbForwardCommand\n'
                                   '3. 浏览器代理设 127.0.0.1:${widget.proxyServer.port}，访问 $_usbConsoleUrl'
                               : '1. Enable developer mode & USB debugging, connect the cable\n'
-                                  '2. Run on the computer: $_hdcCommand\n'
+                                  '2. Run on the computer: $_usbForwardCommand\n'
                                   '3. Set browser proxy to 127.0.0.1:${widget.proxyServer.port}, open $_usbConsoleUrl',
                           style: const TextStyle(fontSize: 12, height: 1.4))),
                   trailing: IconButton(
                       icon: const Icon(Icons.copy, size: 20),
-                      tooltip: _isCN ? '复制 hdc 命令' : 'Copy hdc command',
-                      onPressed: () => _copy(_hdcCommand))),
+                      tooltip: _isCN ? '复制转发命令' : 'Copy forward command',
+                      onPressed: () => _copy(_usbForwardCommand))),
             ],
           ]),
           const SizedBox(height: 12),

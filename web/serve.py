@@ -9,9 +9,11 @@
   PROXYPIN_PHONE      手机代理地址，例如 192.168.3.96:9099（WiFi 模式）
   PROXYPIN_TOKEN      Web 控制台 token
   PROXYPIN_LOCAL_PORT 本机端口，默认 8899
-  PROXYPIN_TRANSPORT  连接方式：wifi（默认）或 usb（hdc fport 转发，公司网络隔离 WiFi 时用）
+  PROXYPIN_CONFIG     配置文件路径（默认 web/.console_config.json；Android 启动器用 .console_config.android.json）
+  PROXYPIN_TRANSPORT  连接方式：wifi（默认）、usb（鸿蒙 hdc fport 转发）或 adb（Android adb forward 转发）
   PROXYPIN_USB_LOCAL_PORT  USB 模式本机转发端口，默认 9099
   HDC                 hdc 可执行文件路径（不在 PATH 时指定）
+  ADB                 adb 可执行文件路径（不在 PATH 时指定）
 """
 
 import json
@@ -31,7 +33,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CONSOLE_DIR = os.path.join(ROOT, "console")
-CONFIG_PATH = os.path.join(ROOT, ".console_config.json")
+_config_env = os.environ.get("PROXYPIN_CONFIG")
+CONFIG_PATH = _config_env if _config_env and os.path.isabs(_config_env) else os.path.join(ROOT, _config_env or ".console_config.json")
 
 HOP_BY_HOP = {"connection", "keep-alive", "transfer-encoding", "content-length", "proxy-authenticate",
               "proxy-authorization", "te", "trailers", "upgrade"}
@@ -62,8 +65,8 @@ def load_config():
     except (TypeError, ValueError):
         usb_local_port, device_port = 9099, 9099
 
-    if transport == "usb":
-        # USB 模式：本机端口经 hdc fport 转发到手机代理端口，手机地址即本机回环
+    if transport in ("usb", "adb"):
+        # USB 模式：本机端口经 hdc fport / adb forward 转发到手机代理端口，手机地址即本机回环
         phone = "http://127.0.0.1:%d" % usb_local_port
     else:
         phone = os.environ.get("PROXYPIN_PHONE") or config.get("phone") or ""
@@ -73,11 +76,19 @@ def load_config():
     return transport, phone, token, port, usb_local_port, device_port
 
 
+def _first_executable(candidates):
+    for path in candidates:
+        if path and os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
+
+
 def find_hdc():
     """定位 hdc 可执行文件：环境变量 HDC > PATH > 常见安装路径。"""
-    candidates = [os.environ.get("HDC"), shutil.which("hdc")]
     home = os.path.expanduser("~")
-    candidates += [
+    candidates = [
+        os.environ.get("HDC"),
+        shutil.which("hdc"),
         os.path.join(home, "command-line-tools", "sdk", "default", "openharmony", "toolchains", "hdc"),
         "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc",
         os.path.join(home, "Library", "OpenHarmony", "Sdk", "default", "openharmony", "toolchains", "hdc"),
@@ -85,13 +96,22 @@ def find_hdc():
     # OpenHarmony SDK 版本目录，例如 ~/Library/OpenHarmony/Sdk/20/toolchains/hdc
     candidates += sorted(glob.glob(os.path.join(home, "Library", "OpenHarmony", "Sdk", "*", "toolchains", "hdc")),
                          reverse=True)
-    for path in candidates:
-        if path and os.path.isfile(path) and os.access(path, os.X_OK):
-            return path
-    return None
+    return _first_executable(candidates)
 
 
-def ensure_usb_forward(local_port, device_port):
+def find_adb():
+    """定位 adb 可执行文件：环境变量 ADB > PATH > 常见安装路径。"""
+    home = os.path.expanduser("~")
+    return _first_executable([
+        os.environ.get("ADB"),
+        shutil.which("adb"),
+        os.path.join(home, "Library", "Android", "sdk", "platform-tools", "adb"),
+        "/opt/homebrew/bin/adb",
+        "/usr/local/bin/adb",
+    ])
+
+
+def ensure_hdc_forward(local_port, device_port):
     """确保 hdc fport 转发存在；失败时打印可操作的诊断信息并返回 False。"""
     hdc = find_hdc()
     if not hdc:
@@ -115,6 +135,45 @@ def ensure_usb_forward(local_port, device_port):
         return True
 
     result = subprocess.run([hdc, "fport", "tcp:%d" % local_port, "tcp:%d" % device_port],
+                            capture_output=True, text=True, timeout=10)
+    if result.returncode != 0:
+        print("建立 USB 转发失败：%s%s（本机端口 %d 可能被占用，可用 PROXYPIN_USB_LOCAL_PORT 换端口）"
+              % (result.stdout.strip(), result.stderr.strip(), local_port))
+        return False
+    print("USB 转发已建立：127.0.0.1:%d -> 手机:%d" % (local_port, device_port))
+    return True
+
+
+def ensure_adb_forward(local_port, device_port):
+    """确保 adb forward 转发存在；失败时打印可操作的诊断信息并返回 False。"""
+    adb = find_adb()
+    if not adb:
+        print("未找到 adb。请安装 Android SDK platform-tools（brew install --cask android-platform-tools），"
+              "或设置环境变量 ADB 指向 adb 可执行文件。")
+        return False
+
+    try:
+        result = subprocess.run([adb, "devices"], capture_output=True, text=True, timeout=10)
+    except Exception as e:
+        print("执行 adb 失败：%s" % e)
+        return False
+    # 只统计已授权设备（行形如 "SERIAL\tdevice"）
+    devices = [line.split("\t")[0] for line in result.stdout.splitlines() if line.endswith("\tdevice")]
+    if not devices:
+        print("adb 未检测到已授权设备。请确认：手机已开开发者模式与 USB 调试，USB 已连接，并在手机上允许本机调试（RSA 弹窗）。")
+        return False
+    serial = devices[0]
+    if len(devices) > 1:
+        print("检测到多台 Android 设备，使用第一台：%s" % serial)
+    base = [adb, "-s", serial]
+
+    wanted = "tcp:%d tcp:%d" % (local_port, device_port)
+    existing = subprocess.run(base + ["forward", "--list"], capture_output=True, text=True, timeout=10).stdout
+    if wanted in existing:
+        print("USB 转发已存在：%s" % wanted)
+        return True
+
+    result = subprocess.run(base + ["forward", "tcp:%d" % local_port, "tcp:%d" % device_port],
                             capture_output=True, text=True, timeout=10)
     if result.returncode != 0:
         print("建立 USB 转发失败：%s%s（本机端口 %d 可能被占用，可用 PROXYPIN_USB_LOCAL_PORT 换端口）"
@@ -279,7 +338,10 @@ def main():
             return 1
 
         if transport == "usb":
-            if not ensure_usb_forward(usb_local_port, device_port):
+            if not ensure_hdc_forward(usb_local_port, device_port):
+                print("USB 模式未就绪，控制台仍会启动，页面打开后可重试。")
+        elif transport == "adb":
+            if not ensure_adb_forward(usb_local_port, device_port):
                 print("USB 模式未就绪，控制台仍会启动，页面打开后可重试。")
 
         ConsoleHandler.phone = phone
@@ -294,7 +356,7 @@ def main():
             return 1
 
         print("Web 控制台已启动：%s" % url, flush=True)
-        print("手机：%s（%s）" % (phone, "USB 转发" if transport == "usb" else "WiFi 直连"), flush=True)
+        print("手机：%s（%s）" % (phone, {"usb": "USB 转发（hdc）", "adb": "USB 转发（adb）"}.get(transport, "WiFi 直连")), flush=True)
         print("按 Ctrl+C 停止。")
         if os.environ.get("PROXYPIN_NO_BROWSER") != "1":
             open_browser(url)

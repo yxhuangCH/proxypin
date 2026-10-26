@@ -488,3 +488,12 @@ Web 端改写规则编辑由裸 JSON textarea 改为与 App 编辑页一致的�
 - 后端 `/api/console/requests/{id}/rewrite` 新增 `?type=requestReplace` 查询参数：走 `RewriteItem.fromRequest` 生成 `replaceRequestLine` / `replaceRequestHeader` / `replaceRequestBody` 预填项，且不要求响应已到达（默认无参仍返回 `responseReplace`，行为不变）；
 - 规则编辑器表单新增 `requestReplace` 类型：请求行（方法下拉「不改/GET/...」+ Path + URL参数，留空序列化为 `null`，对应后端 `item.method ?? request.method` 与 `Uri.replace` 的空值语义）/ 请求头（键值行）/ 请求体（文本，文件型只读保留）三个分区，与响应侧结构一致；
 - 注意：该接口变更在手机端 Dart 代码中，旧版本 App 会忽略 `?type=` 回退为响应替换预填；需重新构建安装 App 后才生效。前端经 `serve.py` 直连仓库 `web/console/`，无需重新打包。
+
+## 17. Android 支持（adb forward，2026-10-25）
+
+控制台后端与前端无平台判断（`WebConsole` 在共享网络层、设置入口无条件展示、`web/console/` 无条件打包），Android App 开箱可用；本次补齐 USB 侧差异：
+
+- `serve.py` 新增 `transport=adb`：`find_adb()`（`ADB` 环境变量 → PATH → `~/Library/Android/sdk/platform-tools/adb` 等常见路径）、`ensure_adb_forward()`（`adb devices` 只认已授权设备、多设备取第一台并 `-s` 指定、`forward --list` 幂等）；hdc 侧同步重命名为 `ensure_hdc_forward()`，行为不变；
+- 新增 `启动控制台-Android.command`：与鸿蒙启动器同流程，USB 模式写 `transport: "adb"`；配置文件独立为 `.console_config.android.json`（`serve.py` 新增 `PROXYPIN_CONFIG` 环境变量指定配置路径，相对路径基于 `web/` 解析），两套配置互不覆盖；`.gitignore` 改为 `web/.console_config*.json`；
+- App 设置页 USB 说明块按平台区分：Android 显示 `adb forward`，鸿蒙显示 `hdc fport`（`Platforms.isAndroid()` 判断，tooltip 同步改为「复制转发命令」）；
+- 注意：hdc 与 adb 的本机转发不能同时占用 `9099`，双机同连时用 `PROXYPIN_USB_LOCAL_PORT` 给其中一路换端口。
