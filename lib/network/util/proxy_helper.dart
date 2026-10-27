@@ -21,6 +21,7 @@ import 'package:proxypin/network/bin/listener.dart';
 import 'package:proxypin/network/channel/channel.dart';
 import 'package:proxypin/network/channel/channel_context.dart';
 import 'package:proxypin/network/components/manager/request_rewrite_manager.dart';
+import 'package:proxypin/network/console/web_console.dart';
 import 'package:proxypin/network/components/manager/script_manager.dart';
 import 'package:proxypin/network/channel/host_port.dart';
 import 'package:proxypin/network/http/codec.dart';
@@ -42,6 +43,11 @@ class ProxyHelper {
   //请求本服务
   static Future<void> localRequest(ChannelContext channelContext, HttpRequest msg, Channel channel,
       {EventListener? listener}) async {
+    //Web 控制台：/console 与 /api/console/*
+    if (await WebConsole.handle(channelContext, msg, channel)) {
+      return;
+    }
+
     //获取配置
     if (msg.path == '/config') {
       final requestRewrites = await RequestRewriteManager.instance;

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ProxyPin 控制台</title>
+  <link rel="stylesheet" href="/console/app.css">
+</head>
+<body>
+<header id="topbar">
+  <span class="brand">ProxyPin</span>
+  <span id="status" class="muted">连接中…</span>
+  <input id="filter" type="search" placeholder="过滤 URL / 方法 / 状态码" autocomplete="off">
+  <button id="btn-new">新建请求</button>
+  <button id="btn-rewrites">改写规则</button>
+  <button id="btn-har">导出 HAR</button>
+  <button id="btn-clear" class="danger">清空</button>
+</header>
+
+<main>
+  <section id="list-pane">
+    <div id="list-tabs">
+      <button class="tab active" data-tab="all">全部请求</button>
+      <button class="tab" data-tab="domains">域名列表</button>
+    </div>
+    <div id="request-list" class="list"></div>
+  </section>
+  <section id="detail-pane">
+    <div id="detail" class="detail">
+      <div class="placeholder">选择左侧请求查看详情</div>
+    </div>
+  </section>
+</main>
+
+<dialog id="send-dialog">
+  <form method="dialog" class="dialog-form" id="send-form">
+    <h2 id="send-title">新建请求</h2>
+    <div class="row">
+      <select id="send-method">
+        <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option>
+        <option>DELETE</option><option>HEAD</option><option>OPTIONS</option>
+      </select>
+      <input id="send-url" type="text" placeholder="http://example.com/api" required>
+    </div>
+    <label>请求头（每行 Name: value）</label>
+    <textarea id="send-headers" rows="6" spellcheck="false"></textarea>
+    <label>请求体（文本，二进制请求体请用原样重发）</label>
+    <textarea id="send-body" rows="8" spellcheck="false"></textarea>
+    <div class="dialog-actions">
+      <span id="send-error" class="error"></span>
+      <button type="button" id="send-cancel">取消</button>
+      <button type="button" id="send-submit" class="primary">发送</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="rule-dialog">
+  <form method="dialog" class="dialog-form" id="rule-form">
+    <h2 id="rule-title">编辑改写规则</h2>
+    <p class="muted">规则保存后立即生效，只影响之后的响应，不会回改历史记录。与手机 App 共用同一份配置。</p>
+    <div id="rule-fields"></div>
+    <textarea id="rule-json" rows="16" spellcheck="false" hidden></textarea>
+    <div class="dialog-actions">
+      <span id="rule-error" class="error"></span>
+      <button type="button" id="rule-json-toggle" title="切换 JSON 高级编辑">JSON</button>
+      <button type="button" id="rule-cancel">取消</button>
+      <button type="button" id="rule-submit" class="primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="rewrites-dialog">
+  <div class="dialog-form">
+    <h2>响应改写规则</h2>
+    <p class="muted">规则与手机 App 共用同一份配置。可替换状态码、响应头、响应体。</p>
+    <div id="rewrites-list" class="rewrites"></div>
+    <div class="dialog-actions">
+      <button type="button" id="rewrites-add">新增规则</button>
+      <button type="button" id="rewrites-close">关闭</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast"></div>
+<script src="/console/app.js"></script>
+</body>
+</html>

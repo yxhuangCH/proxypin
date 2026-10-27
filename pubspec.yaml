@@ -65,3 +65,4 @@ flutter:
     - assets/icon.ico
     - assets/icon_foreground.png
     - assets/js/
+    - web/console/

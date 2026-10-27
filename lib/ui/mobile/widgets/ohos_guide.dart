@@ -20,6 +20,7 @@ import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/native/keep_alive.dart';
 import 'package:proxypin/ui/component/toast.dart';
 import 'package:proxypin/ui/mobile/setting/access_control.dart';
+import 'package:proxypin/ui/mobile/setting/web_console.dart';
 import 'package:proxypin/utils/ip.dart';
 
 /// 鸿蒙首页引导卡（仅 ohos，调用方用 Platforms.isOhos() 门禁）：
@@ -110,6 +111,11 @@ class _OhosGuideCardState extends State<OhosGuideCard> {
                       icon: const Icon(Icons.https, size: 18),
                       label: Text(isCN ? '证书安装引导' : 'CA install guide'),
                       onPressed: _showCertTutorial),
+                  TextButton.icon(
+                      icon: const Icon(Icons.web, size: 18),
+                      label: Text(isCN ? 'Web 控制台' : 'Web console'),
+                      onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => WebConsoleSettingPage(proxyServer: widget.proxyServer)))),
                 ])),
             // 后台保活状态（详见 harmony/docs/06 §3.4：UI 明示服务可中断）
             ValueListenableBuilder(

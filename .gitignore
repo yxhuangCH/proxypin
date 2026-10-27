@@ -51,3 +51,5 @@ app.*.map.json
 l10n_errors.txt
 pubspec.lock
 /dist/
+# Web 控制台本地配置（含 token）
+web/.console_config*.json
