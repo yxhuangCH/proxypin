@@ -845,13 +845,28 @@
     const statusInput = el('input', {type: 'number', id: 'rf-status', min: '100', max: '599', placeholder: '200'});
     if (statusItem?.values?.statusCode != null) statusInput.value = statusItem.values.statusCode;
 
-    // 响应头
+    // 响应头（默认折叠；已有启用配置时自动展开。折叠只是视觉隐藏，表单值照常参与保存）
     const headerBox = el('input', {type: 'checkbox', id: 'rf-header-enabled'});
     headerBox.checked = headerItem?.enabled === true;
     const headerRows = el('div', {id: 'rf-header-rows'});
     const headers = headerItem?.values?.headers || {};
     for (const [name, value] of Object.entries(headers)) addHeaderRow(headerRows, name, value);
     if (Object.keys(headers).length === 0) addHeaderRow(headerRows, '', '');
+    const headerBody = el('div', {class: 'rw-collapse-body'},
+        headerRows,
+        el('div', {class: 'rw-collapse-foot'},
+            el('button', {type: 'button', text: '+ 添加', onclick: () => addHeaderRow(headerRows, '', '')})));
+    headerBody.hidden = !headerBox.checked;
+    const headerExpandBtn = el('button', {type: 'button', class: 'icon expand', text: '▸', title: '展开/收起'});
+    const syncHeaderExpand = () => {
+      headerExpandBtn.textContent = headerBody.hidden ? '▸' : '▾';
+      headerExpandBtn.classList.toggle('expand-on', !headerBody.hidden);
+    };
+    headerExpandBtn.addEventListener('click', () => {
+      headerBody.hidden = !headerBody.hidden;
+      syncHeaderExpand();
+    });
+    syncHeaderExpand();
 
     // 响应体（Web 只支持文本；文件型 body 保留原值并提示到 App 编辑）
     const bodyBox = el('input', {type: 'checkbox', id: 'rf-body-enabled'});
@@ -869,8 +884,8 @@
         el('div', {class: 'rw-section'},
             el('div', {class: 'rw-head'},
                 el('label', null, headerBox, el('span', {text: '替换响应头'})),
-                el('button', {type: 'button', text: '+ 添加', onclick: () => addHeaderRow(headerRows, '', '')})),
-            headerRows),
+                headerExpandBtn),
+            headerBody),
         el('div', {class: 'rw-section'},
             el('div', {class: 'rw-head'},
                 el('label', null, bodyBox, el('span', {text: '替换响应体'}))),

@@ -235,7 +235,9 @@
       "Bash(lsof -nP -iTCP:8899 -sTCP:LISTEN)",
       "Bash(PROXYPIN_NO_BROWSER=1 python3 serve.py)",
       "Bash(kill 8991)",
-      "Bash(chmod +x \"/Users/yxhuang/ai_project/proxypin/web/启动控制台-Android.command\")"
+      "Bash(chmod +x \"/Users/yxhuang/ai_project/proxypin/web/启动控制台-Android.command\")",
+      "Bash(lsof -nP -iTCP -sTCP:LISTEN -p 47880)",
+      "Bash(ps eww:*)"
     ]
   }
 }
