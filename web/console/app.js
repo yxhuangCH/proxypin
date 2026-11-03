@@ -187,6 +187,7 @@
   // ---------- state ----------
   const listEl = document.getElementById('request-list');
   const detailEl = document.getElementById('detail');
+  const detailPaneEl = document.getElementById('detail-pane');
   const statusEl = document.getElementById('status');
   const filterEl = document.getElementById('filter');
 
@@ -194,6 +195,7 @@
   const order = [];           // 到达顺序
   const rowById = new Map();
   let revision = 0;
+  let clearedRevision = 0; // 服务端最近一次清空的 revision，用于区分"清空"与环形缓冲正常淘汰
   let selectedId = null;
   let selectedRevision = -1;
   let lastDetail = null;
@@ -202,6 +204,9 @@
   let polling = false;
   let listTab = 'all';        // all=全部请求 / domains=域名列表（对齐鸿蒙 App）
   let activeDomain = null;    // 域名 Tab 下钻中的域名
+  let renderedMode = null;    // 当前列表渲染模式：domains=域名分组 / requests=请求行
+  let backRowEl = null;       // 下钻态顶部返回行（增量更新时复用）
+  let emptyHintEl = null;     // 空态提示（增量更新时复用）
 
   // ---------- list ----------
   function visibleIds() {
@@ -234,11 +239,16 @@
   }
 
   function requestRow(item) {
-    const id = item.id;
-    const row = el('div', {
-      class: 'row' + (id === selectedId ? ' selected' : ''),
-      onclick: () => selectRequest(id),
-    },
+    const row = el('div', {class: 'row', onclick: () => selectRequest(item.id)});
+    fillRow(row, item);
+    rowById.set(item.id, row);
+    return row;
+  }
+
+  // 原地刷新行内容：复用行元素，避免整列重建导致滚动位置/hover/选中文本丢失
+  function fillRow(row, item) {
+    clear(row);
+    row.append(
         el('span', {class: 'method m-' + item.method.toLowerCase(), text: item.method}),
         el('span', {class: 'url', title: item.url, text: item.path || item.url}),
         el('span', {class: 'status ' + statusClass(item.status),
@@ -247,66 +257,124 @@
         el('span', {class: 'meta', title: item.host, text: item.host}),
         el('span', {class: 'time', text: formatTime(item.requestTime)}),
     );
-    rowById.set(id, row);
-    return row;
+    row.classList.toggle('selected', item.id === selectedId);
+    row._rev = item.revision;
   }
 
   function renderList() {
     if (!listDirty) return;
     listDirty = false;
-    clear(listEl);
-    rowById.clear();
 
-    // 域名列表 Tab（未下钻）：域名 + 请求数 + 最后时间，点击下钻
-    if (listTab === 'domains' && !activeDomain) {
-      const keyword = filterEl.value.trim().toLowerCase();
-      const groups = domainGroups()
-          .filter(([host]) => !keyword || host.toLowerCase().includes(keyword));
-      if (groups.length === 0) {
-        listEl.append(el('div', {class: 'placeholder muted', style: 'padding:24px;text-align:center'},
-            order.length === 0 ? '暂无抓包记录' : '没有匹配的域名'));
-        return;
-      }
-      const fragment = document.createDocumentFragment();
-      for (const [host, group] of groups) {
-        fragment.append(el('div', {
-          class: 'domain-row',
-          onclick: () => {
-            activeDomain = host;
-            listDirty = true;
-            renderList();
-          },
-        },
-            el('div', {class: 'info'},
-                el('div', {class: 'domain', title: host, text: host}),
-                el('div', {class: 'sub', text: group.count + ' 条请求 · 最后 ' + formatTime(group.lastTime)})),
-            el('span', {class: 'chevron', text: '›'})));
-      }
-      listEl.append(fragment);
+    const mode = (listTab === 'domains' && !activeDomain) ? 'domains' : 'requests';
+    if (mode !== renderedMode) {
+      // 模式切换（Tab 切换 / 下钻进出）：结构完全不同，整列重建并回到顶部
+      clear(listEl);
+      rowById.clear();
+      backRowEl = null;
+      emptyHintEl = null;
+      renderedMode = mode;
+      listEl.parentElement.scrollTop = 0;
+    }
+
+    if (mode === 'domains') {
+      renderDomainGroups();
+    } else {
+      renderRequestRows();
+    }
+  }
+
+  // 域名列表 Tab（未下钻）：域名 + 请求数 + 最后时间，点击下钻。
+  // 分组排序随流量变化，仍整列重建，但保留滚动位置（滚动容器是父元素 #list-pane）。
+  function renderDomainGroups() {
+    const keyword = filterEl.value.trim().toLowerCase();
+    const groups = domainGroups()
+        .filter(([host]) => !keyword || host.toLowerCase().includes(keyword));
+    const scrollTop = listEl.parentElement.scrollTop;
+    clear(listEl);
+    if (groups.length === 0) {
+      listEl.append(el('div', {class: 'placeholder muted', style: 'padding:24px;text-align:center'},
+          order.length === 0 ? '暂无抓包记录' : '没有匹配的域名'));
       return;
     }
-
-    const ids = visibleIds();
     const fragment = document.createDocumentFragment();
-    // 下钻态：顶部返回行（即使该域名暂时没有请求也保留，避免无法返回）
-    if (activeDomain) {
-      fragment.append(el('div', {class: 'back-row', onclick: () => {
-        activeDomain = null;
-        listDirty = true;
-        renderList();
-      }}, el('span', {text: '‹ ' + activeDomain})));
-    }
-    if (ids.length === 0) {
-      fragment.append(el('div', {class: 'placeholder muted', style: 'padding:24px;text-align:center'},
-          order.length === 0 ? '暂无抓包记录' : '没有匹配的请求'));
-    } else {
-      for (const id of ids) {
-        const item = requests.get(id);
-        if (!item) continue;
-        fragment.append(requestRow(item));
-      }
+    for (const [host, group] of groups) {
+      fragment.append(el('div', {
+        class: 'domain-row',
+        onclick: () => {
+          activeDomain = host;
+          listDirty = true;
+          renderList();
+        },
+      },
+          el('div', {class: 'info'},
+              el('div', {class: 'domain', title: host, text: host}),
+              el('div', {class: 'sub', text: group.count + ' 条请求 · 最后 ' + formatTime(group.lastTime)})),
+          el('span', {class: 'chevron', text: '›'})));
     }
     listEl.append(fragment);
+    listEl.parentElement.scrollTop = scrollTop;
+  }
+
+  // 请求列表：增量同步，只新建/更新/移动有变化的行，其余 DOM 不动，
+  // 避免轮询刷新时滚动位置跳回顶部、选中行被滚出视野（看起来"突然不见了"）。
+  function renderRequestRows() {
+    const ids = visibleIds();
+    const visibleSet = new Set(ids);
+
+    // 1) 移除已不可见（被过滤）或已删除（超限淘汰/清空）的行
+    for (const [id, row] of rowById) {
+      if (!visibleSet.has(id)) {
+        row.remove();
+        rowById.delete(id);
+      }
+    }
+
+    // 2) 下钻态顶部返回行（即使该域名暂时没有请求也保留，避免无法返回）
+    if (activeDomain) {
+      if (!backRowEl) {
+        backRowEl = el('div', {class: 'back-row', onclick: () => {
+          activeDomain = null;
+          listDirty = true;
+          renderList();
+        }});
+      }
+      clear(backRowEl);
+      backRowEl.append(el('span', {text: '‹ ' + activeDomain}));
+      if (listEl.firstChild !== backRowEl) listEl.prepend(backRowEl);
+    } else if (backRowEl) {
+      backRowEl.remove();
+      backRowEl = null;
+    }
+
+    // 3) 空态提示
+    if (ids.length === 0) {
+      if (!emptyHintEl) {
+        emptyHintEl = el('div', {class: 'placeholder muted', style: 'padding:24px;text-align:center'});
+      }
+      emptyHintEl.textContent = order.length === 0 ? '暂无抓包记录' : '没有匹配的请求';
+      listEl.append(emptyHintEl);
+      return;
+    }
+    if (emptyHintEl) {
+      emptyHintEl.remove();
+      emptyHintEl = null;
+    }
+
+    // 4) 逐行同步：不存在则新建，revision 变了则原地刷新，位置不对则移动
+    let anchor = backRowEl;
+    for (const id of ids) {
+      const item = requests.get(id);
+      if (!item) continue;
+      let row = rowById.get(id);
+      if (!row) {
+        row = requestRow(item);
+      } else if (row._rev !== item.revision) {
+        fillRow(row, item);
+      }
+      const ref = anchor ? anchor.nextSibling : listEl.firstChild;
+      if (ref !== row) listEl.insertBefore(row, ref);
+      anchor = row;
+    }
   }
 
   function updateSelection() {
@@ -1132,9 +1200,11 @@
     try {
       const data = await fetchJson('/api/console/requests?since=' + revision);
 
-      const cleared = (typeof data.revision === 'number' && data.revision < revision) ||
-          (typeof data.count === 'number' && data.count < requests.size);
+      // 只有显式清空才整体重置；服务端环形缓冲淘汰旧条目时 count 会变小，
+      // 但不能当作清空（否则选中项会被无故清掉），客户端缓存可保留更多历史
+      const cleared = typeof data.clearedRevision === 'number' && data.clearedRevision > clearedRevision;
       if (cleared) {
+        clearedRevision = data.clearedRevision;
         requests.clear();
         order.length = 0;
         revision = 0;
@@ -1189,8 +1259,12 @@
     if (!summary || summary.revision === selectedRevision) return;
 
     detailRefreshing = true;
+    // 同一选中的项响应回填触发的自动刷新：重渲染会清空 #detail，
+    // 滚动容器（#detail-pane）scrollTop 会被钳回 0，需保留，避免阅读/编辑时跳动
+    const scrollTop = detailPaneEl.scrollTop;
     try {
       await loadDetail(selectedId);
+      detailPaneEl.scrollTop = scrollTop;
     } finally {
       detailRefreshing = false;
     }
@@ -1225,7 +1299,8 @@
   document.getElementById('btn-clear').addEventListener('click', async () => {
     if (!confirm('清空控制台抓包数据？（不影响手机 App 的列表与代理）')) return;
     try {
-      await postJson('/api/console/clear');
+      const result = await postJson('/api/console/clear');
+      if (typeof result.clearedRevision === 'number') clearedRevision = result.clearedRevision;
       requests.clear();
       order.length = 0;
       revision = 0;

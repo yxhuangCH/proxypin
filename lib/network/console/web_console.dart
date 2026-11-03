@@ -144,6 +144,7 @@ class WebConsole {
       var entries = since <= 0 ? store.all() : store.sinceRevision(since);
       return _jsonResponse(request, HttpStatus.ok, {
         'revision': store.revision,
+        'clearedRevision': store.clearedRevision,
         'count': store.length,
         'requests': entries.map(summaryJson).toList(),
       }, setCookie: setCookie);
@@ -176,7 +177,9 @@ class WebConsole {
     // 清空控制台数据
     if (path == '$apiPrefix/clear' && method == HttpMethod.post) {
       store.clear();
-      return _jsonResponse(request, HttpStatus.ok, {'revision': store.revision}, setCookie: setCookie);
+      return _jsonResponse(request, HttpStatus.ok,
+          {'revision': store.revision, 'clearedRevision': store.clearedRevision},
+          setCookie: setCookie);
     }
 
     // 原样重发 / 从记录预填改写规则

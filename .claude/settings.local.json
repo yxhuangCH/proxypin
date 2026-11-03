@@ -235,7 +235,15 @@
       "Bash(lsof -nP -iTCP:8899 -sTCP:LISTEN)",
       "Bash(PROXYPIN_NO_BROWSER=1 python3 serve.py)",
       "Bash(kill 8991)",
-      "Bash(chmod +x \"/Users/yxhuang/ai_project/proxypin/web/启动控制台-Android.command\")"
+      "Bash(chmod +x \"/Users/yxhuang/ai_project/proxypin/web/启动控制台-Android.command\")",
+      "Bash(xattr -l \"/Users/yxhuang/ai_project/proxypin/web/启动控制台.command\")",
+      "Bash(mdls -name kMDItemContentType \"/Users/yxhuang/ai_project/proxypin/web/启动控制台.command\")",
+      "Bash(defaults read:*)",
+      "Bash(plutil -extract LSHandlers json -o - ~/Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist)",
+      "Bash(/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -dump)",
+      "Bash(ps:*)",
+      "Bash(PROXYPIN_CONFIG=/tmp/nonexistent.json PROXYPIN_TRANSPORT=wifi PROXYPIN_PHONE=http://127.0.0.1:1 PROXYPIN_TOKEN=dummy PROXYPIN_LOCAL_PORT=18898 PROXYPIN_NO_BROWSER=1 python3 serve.py)",
+      "Bash(kill %1)"
     ]
   }
 }

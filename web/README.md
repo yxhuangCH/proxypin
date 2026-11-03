@@ -19,6 +19,8 @@
 配置分别保存在 `web/.console_config.json`（鸿蒙）与 `web/.console_config.android.json`（Android）（已加入 `.gitignore`，含 token，不要提交）。
 需要修改时删除对应文件后重新双击即可。
 
+遇到问题先查 [FAQ.md](FAQ.md)（双击失败、端口占用、认证失败、列表跳动等常见问题与解决办法）。
+
 ## USB 模式说明
 
 USB 模式适合公司 WiFi 有客户端隔离、手机与电脑无法直连的场景：
@@ -69,3 +71,4 @@ PROXYPIN_TRANSPORT=adb PROXYPIN_TOKEN=xxxx python3 serve.py   # adb forward
 | `serve.py` | 本地静态服务 + `/api/console/*` 反向代理 + USB 模式 `hdc fport` / `adb forward` 自动建立 |
 | `启动控制台.command` | macOS 双击启动脚本（鸿蒙） |
 | `启动控制台-Android.command` | macOS 双击启动脚本（Android，独立配置文件） |
+| `FAQ.md` | 常见问题与解决办法 |
