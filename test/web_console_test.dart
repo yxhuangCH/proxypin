@@ -261,6 +261,7 @@ void main() {
 
       var body = await callApi('/api/console/clear?token=secret-token', store: store, method: HttpMethod.post);
       expect(body['revision'], greaterThan(before));
+      expect(body['clearedRevision'], store.clearedRevision);
       expect(store.length, 0);
     });
 
@@ -473,6 +474,26 @@ void main() {
       expect(store.revision, greaterThan(before));
       expect(store.sinceRevision(before), isEmpty);
       expect(store.all(), isEmpty);
+    });
+
+    test('clearedRevision 标记清空时点，环形缓冲淘汰不影响它', () {
+      var store = ConsoleCaptureStore(maxEntries: 2);
+      expect(store.clearedRevision, 0);
+
+      // 淘汰旧条目不是清空
+      store.addRequest(newRequest('a'));
+      store.addRequest(newRequest('b'));
+      store.addRequest(newRequest('c'));
+      expect(store.length, 2);
+      expect(store.clearedRevision, 0);
+
+      store.clear();
+      expect(store.clearedRevision, store.revision);
+      var clearedAt = store.clearedRevision;
+
+      // 清空后继续写入，clearedRevision 不变
+      store.addRequest(newRequest('d'));
+      expect(store.clearedRevision, clearedAt);
     });
   });
 }

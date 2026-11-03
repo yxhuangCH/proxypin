@@ -308,6 +308,17 @@ def preflight(phone, token):
         print("      请确认手机地址、代理服务运行状态与 Web 控制台开关；页面打开后可重试。")
 
 
+def probe_existing_instance(port):
+    """端口被占用时探测占用者是不是已在运行的控制台实例（按 Server 头识别）。"""
+    try:
+        request = urllib.request.Request("http://127.0.0.1:%d/console" % port, method="HEAD")
+        with urllib.request.urlopen(request, timeout=2) as response:
+            server = response.headers.get("Server") or ""
+            return server.startswith("ProxyPinConsole/")
+    except Exception:
+        return False
+
+
 def open_browser(url):
     """打开浏览器。优先用 macOS 原生 `open`（不经 AppleEvent，无需自动化权限），失败回退 webbrowser。"""
     def _open():
@@ -352,7 +363,15 @@ def main():
         try:
             httpd = ThreadingHTTPServer(("127.0.0.1", port), ConsoleHandler)
         except OSError as e:
-            print("无法监听 127.0.0.1:%d：%s（可能已有一个实例在运行）" % (port, e))
+            if probe_existing_instance(port):
+                # 占用者是已在运行的控制台实例（常见于重复双击启动）：直接复用，打开页面后退出
+                print("已有控制台实例在运行：%s" % url)
+                print("无需重复启动，正在打开页面……（本窗口可直接关闭）")
+                if os.environ.get("PROXYPIN_NO_BROWSER") != "1":
+                    open_browser(url)
+                return 0
+            print("无法监听 127.0.0.1:%d：%s（端口被其他程序占用，可设置环境变量 PROXYPIN_LOCAL_PORT 换端口）"
+                  % (port, e))
             return 1
 
         print("Web 控制台已启动：%s" % url, flush=True)

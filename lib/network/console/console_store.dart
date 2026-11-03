@@ -54,10 +54,16 @@ class ConsoleCaptureStore extends EventListener {
   int _revision = 0;
   int _bytes = 0;
 
+  /// 最近一次 [clear] 后的 revision 值，供客户端区分"清空"与环形缓冲正常淘汰
+  int _clearedRevision = 0;
+
   ConsoleCaptureStore({this.maxEntries = 1000, this.maxBytes = 32 * 1024 * 1024});
 
   /// 单调递增 revision，清空后也会继续递增
   int get revision => _revision;
+
+  /// 最近一次清空时的 revision（未清空过为 0）
+  int get clearedRevision => _clearedRevision;
 
   int get length => _order.length;
 
@@ -130,6 +136,7 @@ class ConsoleCaptureStore extends EventListener {
     _order.clear();
     _bytes = 0;
     _revision++;
+    _clearedRevision = _revision;
   }
 
   void _evict() {
